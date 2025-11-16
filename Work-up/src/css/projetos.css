@@ -12,7 +12,7 @@
   --text-medium: #64748b;
   --shadow-purple: rgba(50, 152, 239, 0.3);
   --shadow-subtle: rgba(30, 41, 59, 0.1);
-  --gradient-main: linear-gradient(90deg, #312e81, #1e1b4b);
+  --gradient-main: linear-gradient(135deg, #312e81 0%, #1e1b4b 50%, #111827 100%);
   
   /* Cores de Status */
   --color-success: #2ecc71;
