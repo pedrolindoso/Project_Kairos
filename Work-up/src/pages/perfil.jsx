@@ -95,64 +95,49 @@ export default function Perfil() {
     }
     setEditando(false);
     setImagemPreview(null);
+    setSelectedImage(null); // Limpa imagem selecionada
     fetchPerfil(); 
   };
 
-  // 
+  //
   // -----------------------------------------------------------------
-  // ⬇️ FUNÇÃO handleSaveImage ATUALIZADA ⬇️
+  // ⬇️ FUNÇÃO handleSave UNIFICADA (SALVA TUDO) ⬇️
   // -----------------------------------------------------------------
   //
-  const handleSaveImage = async () => {
-    if (!selectedImage) {
-      setToast({
-        message: "Selecione uma imagem primeiro!",
-        type: "warning"
-      });
-      return;
-    }
-
-    try {
-      const token = localStorage.getItem("token");
-      const formData = new FormData();
-      
-      // <-- CORREÇÃO 1: A chave é 'file' para bater com o @RequestParam("file")
-      formData.append('file', selectedImage); 
-      
-      // <-- CORREÇÃO 2: O endpoint é '/api/usuario/me/foto'
-      const response = await api.post('/api/usuario/me/foto', formData, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'multipart-form-data'
-        }
-      });
-      
-      // Sucesso! O back-end salvou e respondeu com a URL.
-      setToast({
-        message: "Imagem salva com sucesso! Recarregando perfil...",
-        type: "success"
-      });
-    
-      window.location.reload();
-
-    } catch (err) {
-      console.error('Erro ao fazer upload da imagem:', err);
-      setToast({
-        message: "Erro ao salvar imagem. Tente novamente.",
-        type: "error"
-      });
-    }
-  };
-
   const handleSave = async () => {
     try {
       const token = localStorage.getItem("token");
-      
+      let usuarioParaSalvar = { ...usuario }; // Copia o estado atual
+
+      // PASSO 1: VERIFICAR E FAZER UPLOAD DA IMAGEM (se houver uma nova)
+      if (selectedImage) {
+        
+        const formData = new FormData();
+        formData.append('file', selectedImage);
+        
+        const response = await api.post('/api/usuario/me/foto', formData, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'multipart-form-data'
+          }
+        });
+        
+        const novaFotoUrl = response.data.url;
+
+        // Atualiza o objeto 'usuarioParaSalvar' com a nova URL
+        if (usuarioParaSalvar.role === "ROLE_ALUNO") {
+          usuarioParaSalvar.aluno.fotoUrl = novaFotoUrl;
+        } else if (usuarioParaSalvar.role === "ROLE_EMPRESA") {
+          usuarioParaSalvar.empresa.fotoUrl = novaFotoUrl;
+        }
+      }
+
+      // PASSO 2: SALVAR OS CAMPOS DE TEXTO (agora com a fotoUrl possivelmente atualizada)
       let payload;
-      if (usuario.role === "ROLE_ALUNO") {
-          payload = usuario.aluno; 
+      if (usuarioParaSalvar.role === "ROLE_ALUNO") {
+          payload = usuarioParaSalvar.aluno; 
       } else {
-          payload = usuario.empresa;
+          payload = usuarioParaSalvar.empresa;
       }
       
       const res = await api.put(
@@ -161,13 +146,18 @@ export default function Perfil() {
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
+      // PASSO 3: LIMPAR E FINALIZAR
       setUsuario(res.data);
       setOriginalUsuario(res.data);
       setEditando(false);
+      setSelectedImage(null); // Limpa a imagem selecionada
+      setImagemPreview(null); // Limpa o preview
+      
       setToast({
         message: "Perfil atualizado com sucesso!",
         type: "success"
       });
+
     } catch (err)      {
       console.error("Erro ao atualizar perfil:", err);
       setToast({
@@ -199,32 +189,33 @@ export default function Perfil() {
         
         <div className="perfil-top">
           
+          {/* // -------------------------------------------------------
+          // ⬇️ CONTAINER DA FOTO ATUALIZADO ⬇️
+          // -------------------------------------------------------
+          */}
           <div className="foto-container">
-            {/* // -------------------------------------------------------
-            // ⬇️ TAG <img> ATUALIZADA ⬇️
-            // -------------------------------------------------------
-            */}
             <img
-              // <-- CORREÇÃO 3: Lê 'fotoUrl' do aluno ou empresa, não 'avatar'
               src={imagemPreview || (isAluno ? usuario.aluno?.fotoUrl : usuario.empresa?.fotoUrl) || "/default-avatar.png"}
               alt="Foto de perfil"
               className="foto-perfil"
             />
-            <label htmlFor="input-foto" className="editar-foto">
-              <FaPencilAlt size={16} />
-            </label>
+            
+            {/* O LÁPIS SÓ APARECE QUANDO ESTIVER EDITANDO */}
+            {editando && (
+                <label htmlFor="input-foto" className="editar-foto">
+                  <FaPencilAlt size={16} />
+                </label>
+            )}
+
             <input
               id="input-foto"
               type="file"
               accept="image/*"
               onChange={handleImageChange}
               style={{ display: 'none' }}
+              disabled={!editando} // Desabilita o input se não estiver editando
             />
-            {selectedImage && (
-              <button className="btn-salvar-imagem" onClick={handleSaveImage}>
-                Salvar Imagem
-              </button>
-            )}
+            {/* O BOTÃO "Salvar Imagem" FOI REMOVIDO DAQUI */}
           </div>
 
           <div className="perfil-info">
@@ -262,8 +253,6 @@ export default function Perfil() {
                   editando={editando}
                   key={`aluno-matricula-${editando}`}
                 />
-                
-                {/* NOVO CAMPO: DESCRIÇÃO */}
                 <CampoEditavel
                   label="Descrição Pessoal"
                   name="descricao"
@@ -273,8 +262,6 @@ export default function Perfil() {
                   key={`aluno-descricao-${editando}`}
                   isTextarea={true}
                 />
-                
-                {/* NOVO CAMPO: TAGS DE LINGUAGEM (CHECKBOXES) */}
                 <TagsEditaveis
                     label="Habilidades/Tecnologias"
                     tags={alunoTags}
@@ -326,7 +313,6 @@ export default function Perfil() {
           </div>
         </div>
         
-        {/* NOVA SEÇÃO: PROJETOS PARTICIPADOS (SÓ ALUNO) */}
         {isAluno && (
           <ProjetosParticipados 
               projetos={usuario.aluno?.projetosParticipados || []} 
@@ -334,7 +320,6 @@ export default function Perfil() {
         )}
       </div>
       
-      {/* Toast Notification */}
       {toast && (
         <Toast
           message={toast.message}
@@ -347,15 +332,12 @@ export default function Perfil() {
 }
 
 // -----------------------------------------------------------------
-// COMPONENTES DE AJUDA
+// COMPONENTES DE AJUDA (Nenhuma alteração aqui)
 // -----------------------------------------------------------------
 
-// Componente para campos simples e textarea
 function CampoEditavel({ label, name, value, onChange, editando, readOnly, isTextarea }) {
   const isEditable = !readOnly && editando;
-  
   const InputComponent = isTextarea ? 'textarea' : 'input';
-
   return (
     <div className="campo">
       <label>{label}</label>
@@ -373,31 +355,23 @@ function CampoEditavel({ label, name, value, onChange, editando, readOnly, isTex
   );
 }
 
-// Componente para Tags (Leitura ou Edição via Checkbox) 
 function TagsEditaveis({ label, tags, editando, currentSelectedTags, handleTagChange }) {
-    
     const getTagClassName = (tag) => `tag-chip tag-${tag.replace(/\s|#/g, '-').replace(/\+\+/g, 'plus-plus').replace(/\./g, '')}`;
-
     const handleCheckboxChange = (e) => {
         const value = e.target.value;
         const isChecked = e.target.checked;
-        
         let newTagsArray;
         if (isChecked) {
             newTagsArray = [...currentSelectedTags, value];
         } else {
             newTagsArray = currentSelectedTags.filter(tag => tag !== value);
         }
-            
         handleTagChange(newTagsArray);
     };
-
     return (
         <div className="campo">
             <label>{label}</label>
-            
             {editando ? (
-                // MODO EDIÇÃO: GRID DE CHECKBOXES
                 <div className="input-editavel is-editable tags-checkbox-grid"> 
                     {LINGUAGENS_OPTIONS.map(lang => (
                         <label key={lang} className="tag-checkbox-label">
@@ -413,7 +387,6 @@ function TagsEditaveis({ label, tags, editando, currentSelectedTags, handleTagCh
                     <small className="help-text">Selecione suas principais tecnologias.</small>
                 </div>
             ) : (
-                // MODO LEITURA
                 <div className="tags-container">
                     {tags.length > 0 ? (
                         tags.map(tag => (
@@ -430,17 +403,11 @@ function TagsEditaveis({ label, tags, editando, currentSelectedTags, handleTagCh
     );
 }
 
-
-// Componente para listar projetos participados
 function ProjetosParticipados({ projetos }) {
-    
-    // Funções utilitárias necessárias aqui:
     const getTagClassName = (tag) => `tag-chip tag-${tag.replace(/\s|#/g, '-').replace(/\+\+/g, 'plus-plus').replace(/\./g, '')}`;
-
     return (
         <div className="projetos-participados-section">
             <h3><FaProjectDiagram /> Projetos Participados ({projetos.length})</h3>
-            
             <div className="projetos-grid">
                 {projetos.length > 0 ? ( 
                     projetos.map(p => (
@@ -448,13 +415,8 @@ function ProjetosParticipados({ projetos }) {
                             <div className="project-header">
                                 <h4 className="card-title">{p.nome}</h4>
                             </div>
-
                             <div className="project-body">
-                                
-                                {/* Descrição (Simplificada) */}
                                 <p className="card-description">{p.descricao?.substring(0, 100) || 'Sem descrição.'}...</p>
-
-                                {/* Tags */}
                                 <div className="tags-list">
                                     {parseTagsString(p.tags).length > 0 ? (
                                         parseTagsString(p.tags).map(tag => (
@@ -466,8 +428,6 @@ function ProjetosParticipados({ projetos }) {
                                         <span className="no-tags">Sem tags</span>
                                     )}
                                 </div>
-
-                                {/* Detalhes (Oculta Empresa) */}
                                 <div className="card-details">
                                     <p className="card-info"><FaCalendarAlt /> Início: <span>{p.dataInicio ? parseDate(p.dataInicio).toLocaleDateString('pt-BR') : 'N/I'}</span></p>
                                     <p className="card-info"><FaFlag /> Fim (Previsto): <span>{p.dataFim ? parseDate(p.dataFim).toLocaleDateString('pt-BR') : 'N/I'}</span></p>
