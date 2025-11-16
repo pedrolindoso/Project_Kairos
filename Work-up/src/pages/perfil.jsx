@@ -238,7 +238,7 @@ export default function Perfil() {
 
             {isAluno ? (
               <>
-                <CampoEditável
+                <CampoEditavel
                   label="Nome"
                   name="nome"
                   value={usuario.aluno?.nome || ""}
