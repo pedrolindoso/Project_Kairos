@@ -1,6 +1,5 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import '../css/Carrossel.css'
-
 export default function Carousel({ title = 'Projetos em Destaque', items = [] }) {
   const [currentIndex, setCurrentIndex] = useState(0)
   const [fadeClass, setFadeClass] = useState('fade-in')
