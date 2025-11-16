@@ -98,6 +98,11 @@ export default function Perfil() {
     fetchPerfil(); 
   };
 
+  // 
+  // -----------------------------------------------------------------
+  // ⬇️ FUNÇÃO handleSaveImage ATUALIZADA ⬇️
+  // -----------------------------------------------------------------
+  //
   const handleSaveImage = async () => {
     if (!selectedImage) {
       setToast({
@@ -110,34 +115,26 @@ export default function Perfil() {
     try {
       const token = localStorage.getItem("token");
       const formData = new FormData();
-      formData.append('image', selectedImage);
       
-      const response = await api.post('/api/usuario/upload-avatar', formData, {
+      // <-- CORREÇÃO 1: A chave é 'file' para bater com o @RequestParam("file")
+      formData.append('file', selectedImage); 
+      
+      // <-- CORREÇÃO 2: O endpoint é '/api/usuario/me/foto'
+      const response = await api.post('/api/usuario/me/foto', formData, {
         headers: {
           Authorization: `Bearer ${token}`,
-          'Content-Type': 'multipart/form-data'
+          'Content-Type': 'multipart-form-data'
         }
       });
       
-      // Atualiza o usuário com a nova imagem
-      const updatedUser = { ...usuario, avatar: response.data.avatarUrl || imagemPreview };
-      setUsuario(updatedUser);
-      setOriginalUsuario(updatedUser);
-      
-      // Atualiza o localStorage para refletir no navbar
-      const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
-      storedUser.avatar = response.data.avatarUrl || imagemPreview;
-      localStorage.setItem("user", JSON.stringify(storedUser));
-      
-      setImagemPreview(null);
-      setSelectedImage(null);
+      // Sucesso! O back-end salvou e respondeu com a URL.
       setToast({
-        message: "Imagem salva com sucesso!",
+        message: "Imagem salva com sucesso! Recarregando perfil...",
         type: "success"
       });
-      
-      // Recarrega a página para atualizar o navbar
+    
       window.location.reload();
+
     } catch (err) {
       console.error('Erro ao fazer upload da imagem:', err);
       setToast({
@@ -171,7 +168,7 @@ export default function Perfil() {
         message: "Perfil atualizado com sucesso!",
         type: "success"
       });
-    } catch (err) {
+    } catch (err)      {
       console.error("Erro ao atualizar perfil:", err);
       setToast({
         message: err.response?.data?.message || err.response?.data || "Erro ao salvar alterações",
@@ -203,8 +200,13 @@ export default function Perfil() {
         <div className="perfil-top">
           
           <div className="foto-container">
+            {/* // -------------------------------------------------------
+            // ⬇️ TAG <img> ATUALIZADA ⬇️
+            // -------------------------------------------------------
+            */}
             <img
-              src={imagemPreview || usuario.avatar || "/default-avatar.png"}
+              // <-- CORREÇÃO 3: Lê 'fotoUrl' do aluno ou empresa, não 'avatar'
+              src={imagemPreview || (isAluno ? usuario.aluno?.fotoUrl : usuario.empresa?.fotoUrl) || "/default-avatar.png"}
               alt="Foto de perfil"
               className="foto-perfil"
             />
@@ -236,7 +238,7 @@ export default function Perfil() {
 
             {isAluno ? (
               <>
-                <CampoEditavel
+                <CampoEditável
                   label="Nome"
                   name="nome"
                   value={usuario.aluno?.nome || ""}
