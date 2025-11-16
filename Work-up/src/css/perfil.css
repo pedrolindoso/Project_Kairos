@@ -15,10 +15,11 @@
   --danger-color: #e74c3c;
   --shadow-subtle: 0 4px 15px rgba(0, 0, 0, 0.08);
 
- --tag-default-border: #312e81;
+  /* Cor Padrão das Tags */
+  --tag-default-border: #312e81;
   --tag-default-color: #312e81;
 
-  /* --- Cores Específicas (Nomes Corrigidos) --- */
+  /* --- Cores Específicas (para os Checkboxes) --- */
   --tag-JavaScript: #f7df1e;
   --tag-Python: #306998;
   --tag-Java: #e04a4f;
@@ -274,6 +275,7 @@ body {
     padding: 12px 0;
 }
 
+/* Este é o estilo PADRÃO (roxo) que será usado em MODO DE LEITURA */
 .tag-chip {
     display: inline-block;
     padding: 5px 12px;
@@ -290,8 +292,6 @@ body {
 .tag-chip:hover {
     opacity: 0.9;
 }
-
-
 
 .no-tags {
     font-style: italic;
@@ -352,6 +352,31 @@ body {
   background: #7f8c8d;
   color: #fff;
 }
+
+/* ======================================================== */
+/* --- MUDANÇA AQUI: Cores para os CHECKBOXES de Edição --- */
+/* ======================================================== */
+
+/* Aumenta o peso da fonte para a cor se destacar */
+.tag-checkbox-label {
+    font-weight: 600; 
+}
+
+.tag-checkbox-label.tag-JavaScript { color: var(--tag-JavaScript); }
+.tag-checkbox-label.tag-Python { color: var(--tag-Python); }
+.tag-checkbox-label.tag-Java { color: var(--tag-Java); }
+.tag-checkbox-label.tag-C-sharp { color: var(--tag-C-sharp); }
+.tag-checkbox-label.tag-C-plus-plus { color: var(--tag-C-plus-plus); }
+.tag-checkbox-label.tag-React { color: var(--tag-React); }
+.tag-checkbox-label.tag-Angular { color: var(--tag-Angular); }
+.tag-checkbox-label.tag-Vue-js { color: var(--tag-Vue-js); }
+.tag-checkbox-label.tag-Node-js { color: var(--tag-Node-js); }
+.tag-checkbox-label.tag-Spring-Boot { color: var(--tag-Spring-Boot); }
+.tag-checkbox-label.tag-SQL { color: var(--tag-SQL); }
+.tag-checkbox-label.tag-MongoDB { color: var(--tag-MongoDB); }
+.tag-checkbox-label.tag-AWS { color: var(--tag-AWS); }
+.tag-checkbox-label.tag-Docker { color: var(--tag-Docker); }
+
 
 /* ----------------------------------------------------- */
 /* --- SEÇÃO: PROJETOS PARTICIPADOS (REUTILIZANDO ESTILOS) --- */
@@ -427,6 +452,13 @@ body {
     margin-top: 15px;
     padding-top: 10px;
     border-top: 1px solid #f0f0f0;
+}
+
+/* AQUI AS TAGS (dentro de projetos) também usarão o .tag-chip padrão roxo */
+.projeto-participado .tags-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px; /* Gap menor para os cards */
 }
 
 .projeto-participado .card-info {

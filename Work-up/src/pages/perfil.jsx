@@ -357,7 +357,10 @@ function CampoEditavel({ label, name, value, onChange, editando, readOnly, isTex
 
 // Componente para Tags (Leitura ou Edição via Checkbox) 
 function TagsEditaveis({ label, tags, editando, currentSelectedTags, handleTagChange }) {
-    const getTagClassName = (tag) => `tag-chip tag-${tag.replace(/\s|#/g, '-').replace(/\+\+/g, 'plus-plus').replace(/\./g, '')}`;
+    
+    // Esta função SÓ será usada para os checkboxes de edição
+    const getTagSpecificClass = (tag) => `tag-${tag.replace(/\s|#/g, '-').replace(/\+\+/g, 'plus-plus').replace(/\./g, '')}`;
+
     const handleCheckboxChange = (e) => {
         const value = e.target.value;
         const isChecked = e.target.checked;
@@ -369,13 +372,15 @@ function TagsEditaveis({ label, tags, editando, currentSelectedTags, handleTagCh
         }
         handleTagChange(newTagsArray);
     };
+    
     return (
         <div className="campo">
             <label>{label}</label>
             {editando ? (
                 <div className="input-editavel is-editable tags-checkbox-grid"> 
                     {LINGUAGENS_OPTIONS.map(lang => (
-                        <label key={lang} className="tag-checkbox-label">
+                        // MUDANÇA AQUI: Adicionamos a classe de cor específica na label
+                        <label key={lang} className={`tag-checkbox-label ${getTagSpecificClass(lang)}`}>
                             <input 
                                 type="checkbox"
                                 value={lang}
@@ -391,7 +396,8 @@ function TagsEditaveis({ label, tags, editando, currentSelectedTags, handleTagCh
                 <div className="tags-container">
                     {tags.length > 0 ? (
                         tags.map(tag => (
-                            <span key={tag} className={getTagClassName(tag)}>
+                            // MUDANÇA AQUI: Usamos apenas "tag-chip" para manter o roxo padrão
+                            <span key={tag} className="tag-chip">
                                 {tag}
                             </span>
                         ))
@@ -407,7 +413,7 @@ function TagsEditaveis({ label, tags, editando, currentSelectedTags, handleTagCh
 
 // Componente para listar projetos participados
 function ProjetosParticipados({ projetos }) {
-    const getTagClassName = (tag) => `tag-chip tag-${tag.replace(/\s|#/g, '-').replace(/\+\+/g, 'plus-plus').replace(/\./g, '')}`;
+    // A função getTagClassName foi removida daqui, pois não é mais necessária
     return (
         <div className="projetos-participados-section">
             <h3><FaProjectDiagram /> Projetos Participados ({projetos.length})</h3>
@@ -423,7 +429,8 @@ function ProjetosParticipados({ projetos }) {
                                 <div className="tags-list">
                                     {parseTagsString(p.tags).length > 0 ? (
                                         parseTagsString(p.tags).map(tag => (
-                                            <span key={tag} className={getTagClassName(tag)}>
+                                            // MUDANÇA AQUI: Usamos "tag-chip" para manter o roxo padrão
+                                            <span key={tag} className="tag-chip">
                                                 {tag}
                                             </span>
                                         ))
