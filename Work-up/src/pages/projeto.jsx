@@ -43,6 +43,7 @@ export default function ProjetosList() {
     const user = JSON.parse(localStorage.getItem("user"));
     const token = localStorage.getItem("token");
     const role = user?.role || "";
+    
     const parseTagsString = (tagsString) => {
         if (!tagsString || typeof tagsString !== 'string') return [];
         return tagsString.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0);
@@ -232,9 +233,16 @@ export default function ProjetosList() {
         });
     };
     
+    // 🚩 ATUALIZADA: Abre o ConfirmDialog
     const handleEncerrarProjeto = async (id) => {
-        if (!window.confirm("Tem certeza que deseja encerrar este projeto?")) return;
+        setProjetoToCancel(id);
+        setShowConfirmDialog(true);
+    };
 
+    // 🚩 ADICIONADA: Função de confirmação de encerramento
+    const confirmEncerrarProjeto = async () => {
+        const id = projetoToCancel;
+        
         try {
             await api.post(
                 `${baseURL}/${id}/encerrar`,
@@ -245,9 +253,15 @@ export default function ProjetosList() {
             setProjetos(
                 projetos.map((p) => (p.id === id ? { ...p, encerrado: true } : p))
             );
+            
+            setToast && setToast({ message: "Projeto encerrado com sucesso!", type: 'success' });
+
         } catch (err) {
             console.error("Erro ao encerrar projeto:", err.response?.data || err.message);
             setToast && setToast({ message: "Você não tem permissão para encerrar este projeto.", type: 'error' });
+        } finally {
+            setProjetoToCancel(null);
+            setShowConfirmDialog(false);
         }
     };
 
@@ -314,6 +328,7 @@ export default function ProjetosList() {
         }
     };
 
+    // ATUALIZADA: Função unificada para fechar o diálogo
     const cancelDialog = () => {
         setShowConfirmDialog(false);
         setProjetoToCancel(null);
@@ -514,6 +529,7 @@ export default function ProjetosList() {
                                         {!p.encerrado && role === "ROLE_EMPRESA" && (
                                             <button
                                                 className="encerrar-btn"
+                                                // 🚩 MUDANÇA AQUI: Usa a nova função que abre o modal
                                                 onClick={() => handleEncerrarProjeto(p.id)}
                                             >
                                                 Encerrar Projeto
@@ -694,11 +710,21 @@ export default function ProjetosList() {
             />
         )}
         
-        {/* Confirm Dialog */}
+        {/* 🚩 Confirm Dialog UNIFICADO */}
         {showConfirmDialog && (
             <ConfirmDialog
-                message="Tem certeza que deseja cancelar sua inscrição? Esta ação não pode ser desfeita."
-                onConfirm={confirmCancelRegistration}
+                // A mensagem muda dependendo se o aluno está na tela de "Minhas Inscrições" ou se é a empresa encerrando um projeto
+                message={
+                    (modoAluno === "INSCRITOS") 
+                    ? "Tem certeza que deseja cancelar sua inscrição? Esta ação não pode ser desfeita."
+                    : "Tem certeza que deseja encerrar este projeto? Esta ação não pode ser desfeita e o projeto será marcado como Encerrado."
+                }
+                // A função de confirmação é escolhida baseada no contexto
+                onConfirm={
+                    (modoAluno === "INSCRITOS") 
+                    ? confirmCancelRegistration 
+                    : confirmEncerrarProjeto
+                }
                 onCancel={cancelDialog}
             />
         )}
