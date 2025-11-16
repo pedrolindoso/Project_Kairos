@@ -1,3 +1,5 @@
+import React, { useState } from "react";
+
 export default function CTA() {
   return (
     <section className="cta">

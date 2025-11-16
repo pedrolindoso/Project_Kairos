@@ -1,3 +1,5 @@
+import React, { useState } from "react";
+
 function Step({ index, title, desc }) {
   return (
     <div className="step">

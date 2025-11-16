@@ -1,3 +1,4 @@
+import React, { useState } from "react";
 import Carousel from '../components/Carrossel.jsx'
 import '../css/Hero.css'
 

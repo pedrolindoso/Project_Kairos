@@ -1,4 +1,5 @@
 import { FaCalendarAlt, FaMapMarkerAlt } from "react-icons/fa";
+import React, { useState } from "react";
 import "../css/Eventos.css";
 
 export default function CardEvento({ imagem, titulo, descricao, date, location, category, onViewDetails }) {

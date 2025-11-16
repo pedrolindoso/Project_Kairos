@@ -1,3 +1,4 @@
+import React, { useState } from "react";
 import '../css/Carrossel.css'
 
 export default function Carousel({ title = 'Projetos em Destaque', items = [] }) {

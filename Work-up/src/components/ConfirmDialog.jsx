@@ -1,3 +1,4 @@
+import React, { useState } from "react";
 import "../css/ConfirmDialog.css";
 
 export default function ConfirmDialog({ message, onConfirm, onCancel }) {
