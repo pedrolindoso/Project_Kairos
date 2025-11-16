@@ -1,6 +1,6 @@
 // src/pages/Perfil.jsx
 import React, { useState, useEffect } from "react";
-import "../css/perfil.css";
+import "../css/perfil.css"; // Certifique-se que o CSS está sendo importado
 import { FaPencilAlt, FaTimes, FaProjectDiagram, FaCalendarAlt, FaFlag, FaBriefcase } from "react-icons/fa"; 
 import api from "../service/api";
 import Toast from "../components/Toast";
@@ -11,13 +11,12 @@ const LINGUAGENS_OPTIONS = [
     "Vue.js", "Node.js", "Spring Boot", "SQL", "MongoDB", "AWS", "Docker"
 ];
 
-// Funções utilitárias (repetidas do ProjetosList para auto-suficiência)
+// Funções utilitárias
 const parseTagsString = (tagsString) => {
     if (!tagsString || typeof tagsString !== 'string') return [];
     return tagsString.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0);
 };
 
-// 🔹 Função utilitária para criar um objeto Date robusto (Lida com o formato [ano, mês, dia] do LocalDate)
 const parseDate = (dateData) => {
     if (!dateData) return null;
     
@@ -99,11 +98,11 @@ export default function Perfil() {
     fetchPerfil(); 
   };
 
-  //
-  // -----------------------------------------------------------------
-  // ⬇️ FUNÇÃO handleSave UNIFICADA (SALVA TUDO) ⬇️
-  // -----------------------------------------------------------------
-  //
+  /**
+   * Esta é a função principal de salvamento.
+   * Ela cuida tanto do upload da imagem (se houver) quanto
+   * do salvamento dos dados de texto, e sincroniza com o localStorage.
+   */
   const handleSave = async () => {
     try {
       const token = localStorage.getItem("token");
@@ -118,7 +117,7 @@ export default function Perfil() {
         const response = await api.post('/api/usuario/me/foto', formData, {
           headers: {
             Authorization: `Bearer ${token}`,
-            'Content-Type': 'multipart-form-data'
+            'Content-Type': 'multipart/form-data'
           }
         });
         
@@ -146,17 +145,22 @@ export default function Perfil() {
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
-      // PASSO 3: LIMPAR E FINALIZAR
-      setUsuario(res.data);
-      setOriginalUsuario(res.data);
-      setEditando(false);
-      setSelectedImage(null); // Limpa a imagem selecionada
-      setImagemPreview(null); // Limpa o preview
-      
+      // PASSO 3: ATUALIZAR O LOCALSTORAGE E RECARREGAR
+      const usuarioAtualizado = res.data; 
+
+      // 1. Atualiza o localStorage para o Navbar ler os dados novos
+      localStorage.setItem("user", JSON.stringify(usuarioAtualizado));
+
+      // 2. Mostra o toast
       setToast({
-        message: "Perfil atualizado com sucesso!",
+        message: "Perfil atualizado com sucesso! Recarregando...",
         type: "success"
       });
+
+      // 3. Recarrega a página (para o Navbar ler o localStorage atualizado)
+      setTimeout(() => {
+        window.location.reload();
+      }, 1500); // Espera 1.5s antes de recarregar
 
     } catch (err)      {
       console.error("Erro ao atualizar perfil:", err);
@@ -189,10 +193,6 @@ export default function Perfil() {
         
         <div className="perfil-top">
           
-          {/* // -------------------------------------------------------
-          // ⬇️ CONTAINER DA FOTO ATUALIZADO ⬇️
-          // -------------------------------------------------------
-          */}
           <div className="foto-container">
             <img
               src={imagemPreview || (isAluno ? usuario.aluno?.fotoUrl : usuario.empresa?.fotoUrl) || "/default-avatar.png"}
@@ -215,7 +215,6 @@ export default function Perfil() {
               style={{ display: 'none' }}
               disabled={!editando} // Desabilita o input se não estiver editando
             />
-            {/* O BOTÃO "Salvar Imagem" FOI REMOVIDO DAQUI */}
           </div>
 
           <div className="perfil-info">
@@ -332,9 +331,10 @@ export default function Perfil() {
 }
 
 // -----------------------------------------------------------------
-// COMPONENTES DE AJUDA (Nenhuma alteração aqui)
+// COMPONENTES DE AJUDA
 // -----------------------------------------------------------------
 
+// Componente para campos simples e textarea
 function CampoEditavel({ label, name, value, onChange, editando, readOnly, isTextarea }) {
   const isEditable = !readOnly && editando;
   const InputComponent = isTextarea ? 'textarea' : 'input';
@@ -355,6 +355,7 @@ function CampoEditavel({ label, name, value, onChange, editando, readOnly, isTex
   );
 }
 
+// Componente para Tags (Leitura ou Edição via Checkbox) 
 function TagsEditaveis({ label, tags, editando, currentSelectedTags, handleTagChange }) {
     const getTagClassName = (tag) => `tag-chip tag-${tag.replace(/\s|#/g, '-').replace(/\+\+/g, 'plus-plus').replace(/\./g, '')}`;
     const handleCheckboxChange = (e) => {
@@ -403,6 +404,8 @@ function TagsEditaveis({ label, tags, editando, currentSelectedTags, handleTagCh
     );
 }
 
+
+// Componente para listar projetos participados
 function ProjetosParticipados({ projetos }) {
     const getTagClassName = (tag) => `tag-chip tag-${tag.replace(/\s|#/g, '-').replace(/\+\+/g, 'plus-plus').replace(/\./g, '')}`;
     return (
