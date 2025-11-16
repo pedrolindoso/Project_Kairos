@@ -100,8 +100,6 @@ export default function Perfil() {
 
   /**
    * Esta é a função principal de salvamento.
-   * Ela cuida tanto do upload da imagem (se houver) quanto
-   * do salvamento dos dados de texto, e sincroniza com o localStorage.
    */
   const handleSave = async () => {
     try {
@@ -123,7 +121,6 @@ export default function Perfil() {
         
         const novaFotoUrl = response.data.url;
 
-        // Atualiza o objeto 'usuarioParaSalvar' com a nova URL
         if (usuarioParaSalvar.role === "ROLE_ALUNO") {
           usuarioParaSalvar.aluno.fotoUrl = novaFotoUrl;
         } else if (usuarioParaSalvar.role === "ROLE_EMPRESA") {
@@ -131,7 +128,7 @@ export default function Perfil() {
         }
       }
 
-      // PASSO 2: SALVAR OS CAMPOS DE TEXTO (agora com a fotoUrl possivelmente atualizada)
+      // PASSO 2: SALVAR OS CAMPOS DE TEXTO
       let payload;
       if (usuarioParaSalvar.role === "ROLE_ALUNO") {
           payload = usuarioParaSalvar.aluno; 
@@ -147,20 +144,16 @@ export default function Perfil() {
 
       // PASSO 3: ATUALIZAR O LOCALSTORAGE E RECARREGAR
       const usuarioAtualizado = res.data; 
-
-      // 1. Atualiza o localStorage para o Navbar ler os dados novos
       localStorage.setItem("user", JSON.stringify(usuarioAtualizado));
 
-      // 2. Mostra o toast
       setToast({
         message: "Perfil atualizado com sucesso! Recarregando...",
         type: "success"
       });
 
-      // 3. Recarrega a página (para o Navbar ler o localStorage atualizado)
       setTimeout(() => {
         window.location.reload();
-      }, 1500); // Espera 1.5s antes de recarregar
+      }, 1500);
 
     } catch (err)      {
       console.error("Erro ao atualizar perfil:", err);
@@ -200,7 +193,6 @@ export default function Perfil() {
               className="foto-perfil"
             />
             
-            {/* O LÁPIS SÓ APARECE QUANDO ESTIVER EDITANDO */}
             {editando && (
                 <label htmlFor="input-foto" className="editar-foto">
                   <FaPencilAlt size={16} />
@@ -213,7 +205,7 @@ export default function Perfil() {
               accept="image/*"
               onChange={handleImageChange}
               style={{ display: 'none' }}
-              disabled={!editando} // Desabilita o input se não estiver editando
+              disabled={!editando} 
             />
           </div>
 
@@ -261,6 +253,9 @@ export default function Perfil() {
                   key={`aluno-descricao-${editando}`}
                   isTextarea={true}
                 />
+                {/* O COMPONENTE TagsEditaveis FOI ATUALIZADO
+                  PARA ESPELHAR A LÓGICA DE PROJETOS.JSX 
+                */}
                 <TagsEditaveis
                     label="Habilidades/Tecnologias"
                     tags={alunoTags}
@@ -270,7 +265,6 @@ export default function Perfil() {
                 />
               </>
             ) : (
-              // CAMPOS DE EMPRESA
               <>
                 <CampoEditavel
                   label="Nome da Empresa"
@@ -334,7 +328,6 @@ export default function Perfil() {
 // COMPONENTES DE AJUDA
 // -----------------------------------------------------------------
 
-// Componente para campos simples e textarea
 function CampoEditavel({ label, name, value, onChange, editando, readOnly, isTextarea }) {
   const isEditable = !readOnly && editando;
   const InputComponent = isTextarea ? 'textarea' : 'input';
@@ -355,12 +348,26 @@ function CampoEditavel({ label, name, value, onChange, editando, readOnly, isTex
   );
 }
 
-// Componente para Tags (Leitura ou Edição via Checkbox) 
+// =================================================================
+// 🚀 ATUALIZAÇÃO PRINCIPAL AQUI (TagsEditaveis)
+// =================================================================
 function TagsEditaveis({ label, tags, editando, currentSelectedTags, handleTagChange }) {
     
-    // Esta função SÓ será usada para os checkboxes de edição
-    const getTagSpecificClass = (tag) => `tag-${tag.replace(/\s|#/g, '-').replace(/\+\+/g, 'plus-plus').replace(/\./g, '')}`;
+    // 1. Função generateTagClassName copiada de Projetos.jsx
+    //    (necessária para as classes CSS funcionarem)
+    const generateTagClassName = (tag) => {
+        if (tag === "C++") return "tag-c-plus-plus"; 
+        
+        return `tag-${tag
+            .replace(/\s/g, '-')
+            .replace(/\+\+/g, 'plus-plus')
+            .replace(/\#/g, 'sharp') // Trata o C#
+            .replace(/\./g, '-') // Trata Vue.js, Node.js
+            .toLowerCase()
+        }`;
+    }
 
+    // 2. Handler de mudança (lógica idêntica)
     const handleCheckboxChange = (e) => {
         const value = e.target.value;
         const isChecked = e.target.checked;
@@ -377,26 +384,33 @@ function TagsEditaveis({ label, tags, editando, currentSelectedTags, handleTagCh
         <div className="campo">
             <label>{label}</label>
             {editando ? (
-                <div className="input-editavel is-editable tags-checkbox-grid"> 
-                    {LINGUAGENS_OPTIONS.map(lang => (
-                        // MUDANÇA AQUI: Adicionamos a classe de cor específica na label
-                        <label key={lang} className={`tag-checkbox-label ${getTagSpecificClass(lang)}`}>
-                            <input 
-                                type="checkbox"
-                                value={lang}
-                                checked={currentSelectedTags.includes(lang)}
-                                onChange={handleCheckboxChange} 
-                            />
-                            {lang}
-                        </label>
-                    ))}
-                    <small className="help-text">Selecione suas principais tecnologias.</small>
+                // 3. Estrutura JSX do modo de edição ATUALIZADA
+                //    para espelhar a do Projetos.jsx
+                <div className="form-group-tags">
+                    <div className="tag-checkbox-group">
+                        {LINGUAGENS_OPTIONS.map(lang => (
+                            <label key={lang} className="tag-checkbox-label">
+                                <input
+                                    type="checkbox"
+                                    value={lang}
+                                    checked={currentSelectedTags.includes(lang)}
+                                    onChange={handleCheckboxChange}
+                                />
+                                {/* O <span> vira o botão visual */}
+                                <span className={`tag-chip ${generateTagClassName(lang)}`}>
+                                    {lang}
+                                </span>
+                            </label>
+                        ))}
+                    </div>
+                    <small>Selecione suas principais tecnologias.</small>
                 </div>
+
             ) : (
+                // 4. Modo de exibição (sem mudanças, continua roxo padrão)
                 <div className="tags-container">
                     {tags.length > 0 ? (
                         tags.map(tag => (
-                            // MUDANÇA AQUI: Usamos apenas "tag-chip" para manter o roxo padrão
                             <span key={tag} className="tag-chip">
                                 {tag}
                             </span>
@@ -411,9 +425,8 @@ function TagsEditaveis({ label, tags, editando, currentSelectedTags, handleTagCh
 }
 
 
-// Componente para listar projetos participados
 function ProjetosParticipados({ projetos }) {
-    // A função getTagClassName foi removida daqui, pois não é mais necessária
+    // Modo de exibição (sempre roxo padrão)
     return (
         <div className="projetos-participados-section">
             <h3><FaProjectDiagram /> Projetos Participados ({projetos.length})</h3>
@@ -429,7 +442,6 @@ function ProjetosParticipados({ projetos }) {
                                 <div className="tags-list">
                                     {parseTagsString(p.tags).length > 0 ? (
                                         parseTagsString(p.tags).map(tag => (
-                                            // MUDANÇA AQUI: Usamos "tag-chip" para manter o roxo padrão
                                             <span key={tag} className="tag-chip">
                                                 {tag}
                                             </span>
