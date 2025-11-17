@@ -148,20 +148,24 @@ function CreateEventModal({ onClose, onEventCreated, setToast }) {
         
         setIsLoading(true);
 
-        const eventData = {
-            title: newEvent.title,
-            description: newEvent.description,
-            date: newEvent.date,
-            location: newEvent.location,
-            category: newEvent.category
-        };
-        
+     const eventData = { /* ... */ };
         const formData = new FormData();
         formData.append("file", newEvent.fileData); 
         formData.append("eventData", JSON.stringify(eventData));
         
+        const token = localStorage.getItem("token");
+        if (!token) {
+             setToast({ message: "Sessão expirada. Faça login novamente.", type: 'error' });
+             setIsLoading(false);
+             return;
+        }
+
         try {
-            const response = await api.post('/api/eventos/criar', formData);
+            const response = await api.post('/api/eventos/criar', formData, {
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                }
+            });
 
             const eventoCriado = response.data;
             
