@@ -114,6 +114,7 @@ function CreateEventModal({ onClose, onEventCreated, setToast }) {
     const [isLoading, setIsLoading] = useState(false);
     
     const DESCRIPTION_MAX_LENGTH = 300; 
+    const MAX_FILE_SIZE_BYTES = 20 * 1024 * 1024; // 20 MB
 
     const handleChange = (e) => {
         const { name, value, files } = e.target;
@@ -138,13 +139,22 @@ function CreateEventModal({ onClose, onEventCreated, setToast }) {
     const handleSubmit = async (e) => {
         e.preventDefault();
         
-        // ✅ CORREÇÃO DE FLUXO: Se o arquivo não existe, mostra o Toast e PARA a execução.
+        // 1. Validação: A imagem foi selecionada?
         if (!newEvent.fileData) {
             setToast({
-              message: "Por favor, selecione uma imagem de capa para o evento.",
+              message: "Por favor, selecione uma imagem de capa para o evento. (Limite: 20MB)",
               type: 'warning'
             });
             return; 
+        }
+
+        // 2. Validação: O tamanho do arquivo excede 20MB?
+        if (newEvent.fileData.size > MAX_FILE_SIZE_BYTES) {
+             setToast({
+                message: "O arquivo de imagem é muito grande. O limite é 20MB.",
+                type: 'warning'
+            });
+            return;
         }
         
         setIsLoading(true);
@@ -170,10 +180,10 @@ function CreateEventModal({ onClose, onEventCreated, setToast }) {
         }
 
         try {
+            // Enviamos o token manualmente e resetamos o Content-Type para o navegador
             const response = await api.post('/api/eventos/criar', formData, {
                 headers: {
                     'Authorization': `Bearer ${token}`,
-                    // CRUCIAL: Permite que o navegador defina o Content-Type correto (multipart/form-data)
                     'Content-Type': undefined 
                 }
             });
@@ -202,9 +212,10 @@ function CreateEventModal({ onClose, onEventCreated, setToast }) {
             console.error("Falha ao publicar evento:", error);
             const errorMsg = error.response?.data?.message || error.response?.data || error.message;
             
+            // Tratamento de erro de limite de tamanho de upload que pode vir do Spring/Cloudinary
             if (errorMsg.includes("Maximum upload size exceeded") || error.response?.status === 413) {
                  setToast({
-                    message: "Falha: O arquivo de imagem é muito grande. Tente um arquivo menor que 20MB.",
+                    message: "Falha: O arquivo de imagem é muito grande. O limite é 20MB.",
                     type: 'error'
                 });
             } else {
@@ -263,7 +274,7 @@ function CreateEventModal({ onClose, onEventCreated, setToast }) {
                     </select>
                     
                     <div className="form-group-image">
-                        <label>Imagem de Capa do Evento:</label>
+                        <label>Imagem de Capa do Evento (Máx: 20MB):</label>
                         <div className="file-input-wrapper">
                             <input 
                                 id="event-image-upload" 
@@ -318,6 +329,7 @@ function CreateEventModal({ onClose, onEventCreated, setToast }) {
 }
 
 function MyEventsModal({ onClose, onCancelInscricao }) {
+// ... (MyEventsModal sem alterações)
     const [myEvents, setMyEvents] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -408,6 +420,7 @@ function MyEventsModal({ onClose, onCancelInscricao }) {
 }
 
 export default function Eventos() {
+// ... (restante do código Eventos)
     const [events, setEvents] = useState([]);
     const [isLoading, setIsLoading] = useState(false); 
     const [error, setError] = useState(null);
