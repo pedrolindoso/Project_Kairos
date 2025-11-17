@@ -145,6 +145,7 @@ function CreateEventModal({ onClose, onEventCreated, setToast }) {
               message: "Por favor, selecione uma imagem de capa para o evento. (Limite: 20MB)",
               type: 'warning'
             });
+            // ✅ PARA A EXECUÇÃO
             return; 
         }
 
@@ -154,6 +155,7 @@ function CreateEventModal({ onClose, onEventCreated, setToast }) {
                 message: "O arquivo de imagem é muito grande. O limite é 20MB.",
                 type: 'warning'
             });
+            // ✅ PARA A EXECUÇÃO
             return;
         }
         
@@ -180,7 +182,7 @@ function CreateEventModal({ onClose, onEventCreated, setToast }) {
         }
 
         try {
-            // Enviamos o token manualmente e resetamos o Content-Type para o navegador
+            // Enviamos o token manualmente e resetamos o Content-Type
             const response = await api.post('/api/eventos/criar', formData, {
                 headers: {
                     'Authorization': `Bearer ${token}`,
