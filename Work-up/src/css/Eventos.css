@@ -723,6 +723,14 @@
     font-size: 0.95rem;
 }
 
+.form-group-image.highlight {
+  border: 2px solid #facc15; /* amarelo de alerta */
+  border-radius: 8px;
+  padding: 10px;
+  background-color: rgba(250, 204, 21, 0.1);
+  transition: 0.3s ease;
+}
+
 .file-input-wrapper {
     display: flex;
     align-items: center;

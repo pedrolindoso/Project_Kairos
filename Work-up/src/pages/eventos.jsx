@@ -107,12 +107,12 @@ function EventDetailsModal({ event, userRole, onClose, onOpenLogin, onEventClose
         </div>
     );
 }
-
 function CreateEventModal({ onClose, onEventCreated, setToast }) {
     const [newEvent, setNewEvent] = useState(initialNewEvent);
     const [fileName, setFileName] = useState('');
     const [isLoading, setIsLoading] = useState(false);
-    
+    const [highlightImageField, setHighlightImageField] = useState(false); // 🔥 novo estado
+
     const DESCRIPTION_MAX_LENGTH = 300; 
     const MAX_FILE_SIZE_BYTES = 20 * 1024 * 1024; // 20 MB
 
@@ -129,7 +129,8 @@ function CreateEventModal({ onClose, onEventCreated, setToast }) {
                 image: objectUrl,
                 fileData: file
             }));
-            
+
+            setHighlightImageField(false);
             return;
         }
 
@@ -139,23 +140,21 @@ function CreateEventModal({ onClose, onEventCreated, setToast }) {
     const handleSubmit = async (e) => {
         e.preventDefault();
         
-        // 1. Validação: A imagem foi selecionada?
         if (!newEvent.fileData) {
             setToast({
-              message: "Por favor, selecione uma imagem de capa para o evento. (Limite: 20MB)",
+              message: "Por favor, selecione uma imagem de capa para o evento.",
               type: 'warning'
             });
-            // ✅ PARA A EXECUÇÃO
+            setHighlightImageField(true);
             return; 
         }
 
-        // 2. Validação: O tamanho do arquivo excede 20MB?
         if (newEvent.fileData.size > MAX_FILE_SIZE_BYTES) {
              setToast({
                 message: "O arquivo de imagem é muito grande. O limite é 20MB.",
                 type: 'warning'
             });
-            // ✅ PARA A EXECUÇÃO
+            setHighlightImageField(true);
             return;
         }
         
@@ -173,7 +172,6 @@ function CreateEventModal({ onClose, onEventCreated, setToast }) {
         formData.append("file", newEvent.fileData); 
         formData.append("eventData", JSON.stringify(eventData));
         
-        // Essencial para o mobile: Pega o token e garante o header correto
         const token = localStorage.getItem("token");
         if (!token) {
              setToast({ message: "Sessão expirada. Faça login novamente.", type: 'error' });
@@ -182,7 +180,6 @@ function CreateEventModal({ onClose, onEventCreated, setToast }) {
         }
 
         try {
-            // Enviamos o token manualmente e resetamos o Content-Type
             const response = await api.post('/api/eventos/criar', formData, {
                 headers: {
                     'Authorization': `Bearer ${token}`,
@@ -204,7 +201,7 @@ function CreateEventModal({ onClose, onEventCreated, setToast }) {
             };
             
             onEventCreated(novoEventoPublicado);
-              setToast({
+            setToast({
                 message: `Novo Evento Criado com sucesso: ${eventoCriado.title}`,
                 type: 'success'
             });
@@ -214,7 +211,6 @@ function CreateEventModal({ onClose, onEventCreated, setToast }) {
             console.error("Falha ao publicar evento:", error);
             const errorMsg = error.response?.data?.message || error.response?.data || error.message;
             
-            // Tratamento de erro de limite de tamanho de upload que pode vir do Spring/Cloudinary
             if (errorMsg.includes("Maximum upload size exceeded") || error.response?.status === 413) {
                  setToast({
                     message: "Falha: O arquivo de imagem é muito grande. O limite é 20MB.",
@@ -227,9 +223,9 @@ function CreateEventModal({ onClose, onEventCreated, setToast }) {
                 });
             }
 
-          } finally {
+        } finally {
             setIsLoading(false);
-      }
+        }
     };
     
     const categories = ["Workshop", "Curso", "Hackathon", "Competição", "Conferência", "Networking"];
@@ -275,7 +271,8 @@ function CreateEventModal({ onClose, onEventCreated, setToast }) {
                         ))}
                     </select>
                     
-                    <div className="form-group-image">
+                    {/* 🖼️ Campo de imagem com destaque visual */}
+                    <div className={`form-group-image ${highlightImageField ? 'highlight' : ''}`}>
                         <label>Imagem de Capa do Evento (Máx: 20MB):</label>
                         <div className="file-input-wrapper">
                             <input 
