@@ -160,18 +160,29 @@ function CreateEventModal({ onClose, onEventCreated, setToast }) {
         formData.append("file", newEvent.fileData); 
         formData.append("eventData", JSON.stringify(eventData));
         
+        // 🚀 MUDANÇA CRUCIAL: PEGAR TOKEN E FORÇAR O HEADER
+        const token = localStorage.getItem("token");
+        if (!token) {
+             setToast({ message: "Sessão expirada. Faça login novamente.", type: 'error' });
+             setIsLoading(false);
+             return;
+        }
+
         try {
-            const response = await api.post('/api/eventos/criar', formData);
+            // 1. Enviamos o token manualmente (para segurança mobile)
+            // 2. Definimos o Content-Type como 'undefined' ou o removemos, para que o navegador use 'multipart/form-data'
+            const response = await api.post('/api/eventos/criar', formData, {
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    // REMOVEMOS QUALQUER DEFINIÇÃO DE CONTENT-TYPE AQUI. 
+                    // O Axios faz isso automaticamente para o FormData!
+                }
+            });
 
             const eventoCriado = response.data;
             
             const novoEventoPublicado = {
-                id: eventoCriado.id,
-                title: eventoCriado.title,
-                description: eventoCriado.description,
-                date: eventoCriado.date,
-                location: eventoCriado.location,
-                category: eventoCriado.category,
+                // ... (resto dos dados)
                 image: eventoCriado.imageUrl, 
                 featured: eventoCriado.featured, 
             };
