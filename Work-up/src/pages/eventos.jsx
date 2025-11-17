@@ -138,12 +138,13 @@ function CreateEventModal({ onClose, onEventCreated, setToast }) {
     const handleSubmit = async (e) => {
         e.preventDefault();
         
+        // ✅ CORREÇÃO DE FLUXO: Se o arquivo não existe, mostra o Toast e PARA a execução.
         if (!newEvent.fileData) {
             setToast({
               message: "Por favor, selecione uma imagem de capa para o evento.",
               type: 'warning'
             });
-            return;
+            return; 
         }
         
         setIsLoading(true);
@@ -160,8 +161,22 @@ function CreateEventModal({ onClose, onEventCreated, setToast }) {
         formData.append("file", newEvent.fileData); 
         formData.append("eventData", JSON.stringify(eventData));
         
+        // Essencial para o mobile: Pega o token e garante o header correto
+        const token = localStorage.getItem("token");
+        if (!token) {
+             setToast({ message: "Sessão expirada. Faça login novamente.", type: 'error' });
+             setIsLoading(false);
+             return;
+        }
+
         try {
-            const response = await api.post('/api/eventos/criar', formData);
+            const response = await api.post('/api/eventos/criar', formData, {
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    // CRUCIAL: Permite que o navegador defina o Content-Type correto (multipart/form-data)
+                    'Content-Type': undefined 
+                }
+            });
 
             const eventoCriado = response.data;
             
@@ -186,10 +201,19 @@ function CreateEventModal({ onClose, onEventCreated, setToast }) {
         } catch (error) {
             console.error("Falha ao publicar evento:", error);
             const errorMsg = error.response?.data?.message || error.response?.data || error.message;
-           setToast({
-                message: `Falha ao publicar evento: ${errorMsg}`,
-                type: 'error'
-            });
+            
+            if (errorMsg.includes("Maximum upload size exceeded") || error.response?.status === 413) {
+                 setToast({
+                    message: "Falha: O arquivo de imagem é muito grande. Tente um arquivo menor que 20MB.",
+                    type: 'error'
+                });
+            } else {
+                 setToast({
+                    message: `Falha ao publicar evento: ${errorMsg}`,
+                    type: 'error'
+                });
+            }
+
           } finally {
             setIsLoading(false);
       }
