@@ -328,7 +328,6 @@ export default function ProjetosList() {
         }
     };
 
-    // ATUALIZADA: Função unificada para fechar o diálogo
     const cancelDialog = () => {
         setShowConfirmDialog(false);
         setProjetoToCancel(null);
@@ -392,7 +391,6 @@ export default function ProjetosList() {
                             </a>
                         )}
 
-                        {/* Botão Criar Projeto SÓ DEVE APARECER para a EMPRESA */}
                         {role === "ROLE_EMPRESA" && (
                             <button 
                                 className="criar-projeto-btn" 
@@ -405,7 +403,6 @@ export default function ProjetosList() {
                     </div>
                 </div>
 
-                {/* SEÇÃO DE FILTROS */}
                 <div className="filter-controls-bar">
                     <input
                         className="search-input"
@@ -414,7 +411,6 @@ export default function ProjetosList() {
                         onChange={(e) => setFiltroTexto(e.target.value)}
                     />
                     
-                    {/* Filtro de Regime */}
                     <select
                         className="filter-select"
                         value={filtroRegime}
@@ -425,7 +421,6 @@ export default function ProjetosList() {
                         <option value="CLT">CLT</option>
                     </select>
                     
-                    {/* Filtro de Tag Específica */}
                     <select
                         className="filter-select"
                         value={filtroTag}
@@ -496,7 +491,6 @@ export default function ProjetosList() {
                                         )}
                                     </div>
                                     
-                                    {/* Lógica do Botão para ALUNO (Inscrever / Inscrito / Cancelar) */}
                                         {!p.encerrado && (role === "ROLE_ALUNO" || !token) && (                                        <>
                                             {modoAluno === "INSCRITOS" ? (
                                                 <div className="status-and-action">
@@ -529,7 +523,6 @@ export default function ProjetosList() {
                                         {!p.encerrado && role === "ROLE_EMPRESA" && (
                                             <button
                                                 className="encerrar-btn"
-                                                // 🚩 MUDANÇA AQUI: Usa a nova função que abre o modal
                                                 onClick={() => handleEncerrarProjeto(p.id)}
                                             >
                                                 Encerrar Projeto
@@ -594,7 +587,6 @@ export default function ProjetosList() {
                         </div>
                     </div>
                 )}
-                {/* MODAL DE CRIAÇÃO */}
                 {showModal && (
                     <div className="modal-overlay" onClick={() => {setShowModal(false); resetForm();}}>
                         <div className="modal-content large-modal" onClick={(e) => e.stopPropagation()}>
@@ -701,7 +693,6 @@ export default function ProjetosList() {
             </div>
         <Footer /> 
         
-        {/* Toast Notifications */}
         {toast && (
             <Toast
                 message={toast.message}
@@ -710,16 +701,13 @@ export default function ProjetosList() {
             />
         )}
         
-        {/* 🚩 Confirm Dialog UNIFICADO */}
         {showConfirmDialog && (
             <ConfirmDialog
-                // A mensagem muda dependendo se o aluno está na tela de "Minhas Inscrições" ou se é a empresa encerrando um projeto
                 message={
                     (modoAluno === "INSCRITOS") 
                     ? "Tem certeza que deseja cancelar sua inscrição? Esta ação não pode ser desfeita."
                     : "Tem certeza que deseja encerrar este projeto? Esta ação não pode ser desfeita e o projeto será marcado como Encerrado."
                 }
-                // A função de confirmação é escolhida baseada no contexto
                 onConfirm={
                     (modoAluno === "INSCRITOS") 
                     ? confirmCancelRegistration 

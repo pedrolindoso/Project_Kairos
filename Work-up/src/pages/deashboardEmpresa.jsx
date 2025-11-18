@@ -52,7 +52,6 @@ const PerfilAlunoModal = ({ alunoId, onClose }) => {
                         <h2 className="modal-title">Perfil de {perfil.aluno.nome}</h2>
                         
                         <div className="perfil-detalhe-body">
-                            {/* Coluna 1: Informações Básicas */}
                             <div className="detalhe-coluna-info">
                                 <div className="detalhe-campo"><h4>Email:</h4><p>{perfil.email}</p></div>
                                 <div className="detalhe-campo"><h4>Matrícula:</h4><p>{perfil.aluno.matricula}</p></div>
@@ -65,7 +64,6 @@ const PerfilAlunoModal = ({ alunoId, onClose }) => {
                             </div>
                             
                             <div className="detalhe-coluna-tags">
-                                {/* Tags */}
                                 <div className="detalhe-campo">
                                     <h4>Habilidades:</h4>
                                     <div className="tags-list">
@@ -75,7 +73,6 @@ const PerfilAlunoModal = ({ alunoId, onClose }) => {
                                     </div>
                                 </div>
                                 
-                                {/* Projetos Participados */}
                                 <div className="detalhe-campo">
                                     <h4><FaProjectDiagram /> Projetos Participados ({perfil.aluno.projetosParticipados?.length || 0})</h4>
                                     <ul className="projetos-participados-lista">
@@ -159,11 +156,9 @@ export default function EmpresaDashboard() {
 
     if (loading) return <div className="dashboard-container"><FaSync className="loading-spinner" size={30} /> Carregando...</div>;
     
-    // Layout de retorno
     return (
         <div className="dashboard-container">
             <div className="dashboard-header-controls">
-                {/* Botão de Voltar */}
                 <button 
                     className="btn-voltar-projetos" 
                     onClick={() => navigate("/projetos")}

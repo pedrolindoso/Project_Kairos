@@ -111,7 +111,7 @@ function CreateEventModal({ onClose, onEventCreated, setToast }) {
     const [newEvent, setNewEvent] = useState(initialNewEvent);
     const [fileName, setFileName] = useState('');
     const [isLoading, setIsLoading] = useState(false);
-    const [imageError, setImageError] = useState(''); // 🔥 novo estado
+    const [imageError, setImageError] = useState('');
 
     const DESCRIPTION_MAX_LENGTH = 300; 
 
@@ -129,7 +129,7 @@ function CreateEventModal({ onClose, onEventCreated, setToast }) {
                 fileData: file
             }));
 
-            setImageError(''); // limpa o erro ao escolher imagem
+            setImageError('');
             return;
         }
 
@@ -139,7 +139,6 @@ function CreateEventModal({ onClose, onEventCreated, setToast }) {
     const handleSubmit = async (e) => {
         e.preventDefault();
         
-        // ✅ Validação da imagem
         if (!newEvent.fileData) {
             setImageError('Por favor, selecione uma imagem de capa para o evento.');
             setToast({
@@ -242,7 +241,6 @@ function CreateEventModal({ onClose, onEventCreated, setToast }) {
                         ))}
                     </select>
                     
-                    {/* 🖼️ Campo de imagem com erro visível */}
                     <div className={`form-group-image ${imageError ? 'highlight' : ''}`}>
                         <label>Imagem de Capa do Evento:</label>
                         <div className="file-input-wrapper">
@@ -261,7 +259,6 @@ function CreateEventModal({ onClose, onEventCreated, setToast }) {
                                 {fileName || "Nenhum arquivo selecionado"}
                             </span>
                         </div>
-                        {/* Mensagem de erro abaixo do campo */}
                         {imageError && <p className="error-message">{imageError}</p>}
                     </div>
 

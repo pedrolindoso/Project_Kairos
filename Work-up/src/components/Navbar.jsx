@@ -40,7 +40,6 @@ export default function Navbar() {
     if (window.innerWidth <= MOBILE_BREAKPOINT) {
         setMobileOpen(v => !v);
         setMenuOpen(false);
-    } else {
     }
   }
 
@@ -69,7 +68,6 @@ export default function Navbar() {
             <img src={logo} alt="Kairos" className="brand__logo" />
           </a>
 
-          {/* mobile menu toggle */}
           <button
             className="nav__toggle"
             aria-label={mobileOpen ? "Fechar menu" : "Abrir menu"}
@@ -83,15 +81,15 @@ export default function Navbar() {
             <a href="/" onClick={closeMobileMenu}>Início</a>
             <a href="/eventos" onClick={closeMobileMenu}>Eventos</a>
             <a href="/projetos" onClick={closeMobileMenu}>Projetos</a>
-            <a href="/evolucao" onClick={closeMobileMenu}>Evolução</a>
+            
             {user && (
-               <a href="/perfil?tab=dashboard" onClick={closeMobileMenu}>Dashboard</a>
+               <a href="/perfil?tab=evolucao" onClick={closeMobileMenu}>Evolução</a>
             )}
 
             {user && isMobileView && (
               <>
                 <div className="mobile-divider" style={{ borderTop: '1px solid rgba(0,0,0,0.1)', margin: '5px 0', width: '100%' }}></div>
-                <a href="/perfil" onClick={closeMobileMenu}>Perfil</a>
+                <a href="/perfil?tab=perfil" onClick={closeMobileMenu}>Meu Perfil</a>
                 <a 
                     href="#" 
                     onClick={handleLogout} 
@@ -105,7 +103,6 @@ export default function Navbar() {
             
           <div className="nav__actions">
             {!user ? (
-              // BOTOES DESLOGADO
               <>
                 <button
                   className="btn"
@@ -127,7 +124,6 @@ export default function Navbar() {
                 </button>
               </>
             ) : (
-              // MENU DROPDOWN
               <div className="user-menu" ref={dropdownRef}>
                 <div
                   className="user-info"
@@ -147,6 +143,7 @@ export default function Navbar() {
                     height: 40,
                     borderRadius: "50%",
                     border: "2px solid #3298EF", 
+                    objectFit: "cover"
                   }}
                   />
                   {!mobileOpen && (menuOpen ? <X size={24} /> : <Menu size={24} />)}
@@ -154,10 +151,24 @@ export default function Navbar() {
 
                 {menuOpen && (
                   <ul className="dropdown">
-                    <li><a href="/perfil" onClick={() => setMenuOpen(false)}>Perfil</a></li>
+                    <li>
+                        <a href="/perfil?tab=perfil" onClick={() => setMenuOpen(false)}>
+                            Meus Dados
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/perfil?tab=projetos" onClick={() => setMenuOpen(false)}>
+                            Meus Projetos
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/perfil?tab=evolucao" onClick={() => setMenuOpen(false)}>
+                            Evolução
+                        </a>
+                    </li>
                     <li 
                       onClick={handleLogout}
-                      style={{ cursor: 'pointer' }}
+                      style={{ cursor: 'pointer', borderTop: '1px solid #eee', marginTop: '5px', paddingTop: '5px', color: '#ef4444' }}
                     >
                       Sair
                     </li>

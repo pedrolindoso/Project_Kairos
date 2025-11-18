@@ -1,25 +1,26 @@
 import React, { useState, useEffect, useMemo } from "react";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom"; 
 import "../css/perfil.css"; 
 import { 
     FaPencilAlt, FaTimes, FaProjectDiagram, FaCalendarAlt, 
     FaBars, FaUser, FaChartPie, FaSignOutAlt,
-    FaMapMarkerAlt
+    FaMapMarkerAlt, FaRocket, FaBullseye, FaMedal, 
+    FaClock, FaUsers, FaStar, FaBolt, FaArrowUp, FaChartLine, FaExternalLinkAlt, FaChartArea
 } from "react-icons/fa"; 
 import api from "../service/api";
 import Toast from "../components/Toast";
 
-// --- IMPORTAÇÕES DO RECHARTS (GRÁFICOS) ---
 import { 
-    BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
-    PieChart, Pie, Cell
+    BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+    LineChart, Line, PieChart, Pie, Cell 
 } from 'recharts';
 
-// --- CONSTANTES E UTILITÁRIOS ---
 const LINGUAGENS_OPTIONS = [
     "JavaScript", "Python", "Java", "C#", "C++", "React", "Angular", 
     "Vue.js", "Node.js", "Spring Boot", "SQL", "MongoDB", "AWS", "Docker"
 ];
+
+const COLORS = ['#3298EF', '#312e81', '#1e1b4b', '#0078D1', '#111827', '#6366f1', '#8b5cf6', '#06b6d4'];
 
 const parseTagsString = (tagsString) => {
     if (Array.isArray(tagsString)) return tagsString; 
@@ -27,85 +28,33 @@ const parseTagsString = (tagsString) => {
     return tagsString.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0);
 };
 
-// --- FUNÇÃO DE DATA BLINDADA (VERSÃO ROBUSTA) ---
 const parseDate = (dateData) => {
     if (!dateData) return null;
-
     try {
-        // 1. Se já for um array de data do Java [2025, 3, 12]
         if (Array.isArray(dateData) && dateData.length >= 3) {
-            // Mês no Java array começa em 1, no JS começa em 0
             return new Date(dateData[0], dateData[1] - 1, dateData[2]);
         }
-
-        // 2. Se for string
         if (typeof dateData === 'string') {
             const str = dateData.trim().toLowerCase();
-
-            // Tenta formato com barras ou traços: "12/03", "12/03/2025", "2025-03-12"
             if (str.match(/\d+[\/-]\d+/)) {
-                // Se for formato ISO (YYYY-MM-DD)
-                if (str.match(/^\d{4}-\d{2}-\d{2}/)) {
-                    return new Date(str); 
-                }
-                
-                // Se for formato BR (DD/MM ou DD/MM/YYYY)
-                const parts = str.split(/[\/-]/); // Separa por / ou -
-                if (parts.length >= 2) {
-                    const dia = parseInt(parts[0]);
-                    const mes = parseInt(parts[1]) - 1; // JS é 0-11
-                    // Se tiver ano usa ele, senão usa o ano atual
-                    const ano = parts[2] ? parseInt(parts[2]) : new Date().getFullYear();
-                    return new Date(ano, mes, dia);
-                }
+                 let date = new Date(dateData);
+                 if (!isNaN(date.getTime())) return date;
             }
-
-            // Tenta formato texto: "12 mar", "12 de março"
-            const mesesMap = {
-                'jan': 0, 'fev': 1, 'mar': 2, 'abr': 3, 'mai': 4, 'jun': 5,
-                'jul': 6, 'ago': 7, 'set': 8, 'out': 9, 'nov': 10, 'dez': 11
-            };
-
-            // Remove palavras de ligação como "de" e caracteres especiais
-            const cleanStr = str.replace(/\sde\s/g, ' ').replace(/[^a-z0-9 ]/g, '');
+            const mesesMap = {'jan':0,'fev':1,'mar':2,'abr':3,'mai':4,'jun':5,'jul':6,'ago':7,'set':8,'out':9,'nov':10,'dez':11};
+            const cleanStr = str.replace(/[^a-z0-9 ]/g, '');
             const parts = cleanStr.split(/\s+/);
-
-            let dia = -1;
-            let mesIndex = -1;
-
-            // Procura por número (dia) e texto (mês)
-            parts.forEach(part => {
-                if (!isNaN(part)) {
-                    dia = parseInt(part);
-                } else {
-                    // Tenta achar o mês pelo início do nome (ex: "mar" acha "março")
-                    for (const key in mesesMap) {
-                        if (part.startsWith(key)) {
-                            mesIndex = mesesMap[key];
-                            break;
-                        }
-                    }
-                }
+            let dia = -1, mesIndex = -1;
+            parts.forEach(p => {
+                if(!isNaN(p)) dia = parseInt(p);
+                else Object.keys(mesesMap).forEach(m => { if(p.startsWith(m)) mesIndex = mesesMap[m] });
             });
-
-            if (dia > 0 && mesIndex > -1) {
-                const anoAtual = new Date().getFullYear();
-                return new Date(anoAtual, mesIndex, dia);
-            }
+            if(dia > 0 && mesIndex > -1) return new Date(new Date().getFullYear(), mesIndex, dia);
         }
-
-        // Última tentativa: Date nativo (para strings ISO completas)
-        let nativeDate = new Date(dateData);
-        if (!isNaN(nativeDate.getTime())) return nativeDate;
-
-        return null;
-    } catch (e) {
-        console.error("Erro parseDate:", e);
-        return null;
-    }
+        let d = new Date(dateData);
+        return isNaN(d.getTime()) ? null : d;
+    } catch (e) { return null; }
 }
 
-// --- COMPONENTE PRINCIPAL ---
 export default function Perfil() {
   const [usuario, setUsuario] = useState(null);
   const [editando, setEditando] = useState(false);
@@ -119,6 +68,18 @@ export default function Perfil() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [activeTab, setActiveTab] = useState("perfil"); 
 
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const tab = params.get("tab");
+    if (tab === "evolucao") {
+        setActiveTab("evolucao");
+    } else if (tab === "projetos") {
+        setActiveTab("projetos");
+    } else if (tab === "perfil") {
+        setActiveTab("perfil");
+    }
+  }, [location]);
+
   const fetchPerfil = async () => {
     try {
       const token = localStorage.getItem("token");
@@ -127,9 +88,10 @@ export default function Perfil() {
       const res = await api.get("/api/usuario/me", {
         headers: { Authorization: `Bearer ${token}` },
       });
-      const data = res.data;
+      let data = res.data;
 
-      // Buscar Projetos (Se for empresa)
+      data.dataCadastro = data.dataCadastro || data.createdAt; 
+
       if (data.role === "ROLE_EMPRESA") {
           try {
               const projetosRes = await api.get("/api/projetos/meus", {
@@ -139,7 +101,6 @@ export default function Perfil() {
           } catch (e) { console.error("Erro projetos", e); }
       }
 
-      // Buscar Eventos (Aluno ou Empresa)
       try {
           let urlEventos = "";
           if (data.role === "ROLE_ALUNO") urlEventos = "/api/eventos/minhas-inscricoes";
@@ -171,14 +132,6 @@ export default function Perfil() {
   useEffect(() => {
     fetchPerfil();
   }, []);
-
-  useEffect(() => {
-    const params = new URLSearchParams(location.search);
-    const tab = params.get("tab");
-    if (tab === "dashboard") {
-        setActiveTab("dashboard");
-    }
-  }, [location]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -262,8 +215,8 @@ export default function Perfil() {
             <button className={`nav-item ${activeTab === 'eventos' ? 'active' : ''}`} onClick={() => setActiveTab('eventos')}>
                 <FaCalendarAlt className="nav-icon" /> <span>Eventos</span>
             </button>
-            <button className={`nav-item ${activeTab === 'dashboard' ? 'active' : ''}`} onClick={() => setActiveTab('dashboard')}>
-                <FaChartPie className="nav-icon" /> <span>Dashboard</span>
+            <button className={`nav-item ${activeTab === 'evolucao' ? 'active' : ''}`} onClick={() => setActiveTab('evolucao')}>
+                <FaChartPie className="nav-icon" /> <span>Evolução</span>
             </button>
             
             <div style={{marginTop: 'auto', borderTop: '1px solid #e5e7eb', paddingTop: '10px'}}>
@@ -281,7 +234,6 @@ export default function Perfil() {
       <main className="profile-content">
         <button className="menu-toggle-btn" onClick={() => setSidebarOpen(!sidebarOpen)}><FaBars /></button>
 
-        {/* --- ABA: PERFIL --- */}
         {activeTab === 'perfil' && (
             <div className="tab-content">
                 <h2 className="perfil-titulo">{isAluno ? "Meu Perfil" : "Perfil da Empresa"}</h2>
@@ -326,7 +278,6 @@ export default function Perfil() {
             </div>
         )}
 
-        {/* --- ABA: PROJETOS --- */}
         {activeTab === 'projetos' && (
             <div className="tab-content">
                  <h2 className="perfil-titulo"><FaProjectDiagram /> Projetos</h2>
@@ -334,7 +285,6 @@ export default function Perfil() {
             </div>
         )}
 
-        {/* --- ABA: EVENTOS --- */}
         {activeTab === 'eventos' && (
             <div className="tab-content">
                 <h2 className="perfil-titulo"><FaCalendarAlt /> Eventos</h2>
@@ -342,33 +292,8 @@ export default function Perfil() {
             </div>
         )}
 
-        {/* --- ABA: DASHBOARD (COM GRÁFICOS) --- */}
-        {activeTab === 'dashboard' && (
-            <div className="tab-content">
-                <h2 className="perfil-titulo"><FaChartPie /> Dashboard Analytics</h2>
-                
-                {/* CARDS DE RESUMO */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px', marginTop: '20px', marginBottom: '30px' }}>
-                    <div className="card-dashboard" style={{ padding: '20px', background: '#fff', borderRadius: '10px', boxShadow: '0 4px 6px rgba(0,0,0,0.05)', borderTop: '4px solid #3298EF' }}>
-                        <h3 style={{fontSize: '0.9rem', color: '#666', textTransform: 'uppercase', letterSpacing: '1px'}}>Total Projetos</h3>
-                        <p style={{ fontSize: '2.5rem', fontWeight: 'bold', color: '#1f2937', margin: '10px 0 0 0' }}>
-                            {isAluno ? (usuario.aluno?.projetosParticipados?.length || 0) : (usuario.empresa?.projetos?.length || 0)}
-                        </p>
-                    </div>
-                    <div className="card-dashboard" style={{ padding: '20px', background: '#fff', borderRadius: '10px', boxShadow: '0 4px 6px rgba(0,0,0,0.05)', borderTop: '4px solid #10b981' }}>
-                        <h3 style={{fontSize: '0.9rem', color: '#666', textTransform: 'uppercase', letterSpacing: '1px'}}>Total Eventos</h3>
-                        <p style={{ fontSize: '2.5rem', fontWeight: 'bold', color: '#1f2937', margin: '10px 0 0 0' }}>
-                            {isAluno ? (usuario.aluno?.eventos?.length || 0) : (usuario.empresa?.eventos?.length || 0)}
-                        </p>
-                    </div>
-                </div>
-
-                {/* COMPONENTE DE GRÁFICOS RECHARTS */}
-                <DashboardGraficos 
-                    projetos={isAluno ? usuario.aluno?.projetosParticipados : usuario.empresa?.projetos}
-                    eventos={isAluno ? usuario.aluno?.eventos : usuario.empresa?.eventos}
-                />
-            </div>
+        {activeTab === 'evolucao' && (
+            <DashboardEvolucao usuario={usuario} isAluno={isAluno} />
         )}
 
       </main>
@@ -377,7 +302,6 @@ export default function Perfil() {
   );
 }
 
-// --- SUB-COMPONENTES ---
 
 function CampoEditavel({ label, name, value, onChange, editando, readOnly, isTextarea }) {
   const isEditable = !readOnly && editando;
@@ -470,114 +394,190 @@ function EventosParticipados({ eventos }) {
     );
 }
 
-// --- NOVO COMPONENTE DE GRÁFICOS (Sincronizado) ---
-function DashboardGraficos({ projetos, eventos }) {
-    
-    // 1. Processar dados para o gráfico de BARRAS (Ano Atual Completo)
-    const dadosBarra = useMemo(() => {
-        const meses = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
-        const anoAtual = new Date().getFullYear();
-        const resultado = [];
+function DashboardEvolucao({ usuario, isAluno }) {
+    const navigate = useNavigate(); // Hook para navegação
+    const [realData, setRealData] = useState(null);
 
-        // Criar estrutura para Jan-Dez do ano atual
-        for (let i = 0; i < 12; i++) {
-            resultado.push({
-                name: meses[i],
-                mesIndex: i,
-                ano: anoAtual,
-                Projetos: 0,
-                Eventos: 0
-            });
+    useEffect(() => {
+        if (!usuario) return;
+        
+        const projetos = isAluno ? (usuario.aluno?.projetosParticipados || []) : (usuario.empresa?.projetos || []);
+        const eventos = isAluno ? (usuario.aluno?.eventos || []) : (usuario.empresa?.eventos || []);
+        const tags = isAluno ? parseTagsString(usuario.aluno?.tags) : [];
+        
+        const totalProjetos = projetos.length;
+        const projetosConcluidos = projetos.filter(p => p.encerrado || p.status === 'CONCLUIDO').length;
+        const totalEventos = eventos.length;
+        
+        let totalColaboradores = 0;
+        if(!isAluno && projetos.length > 0) {
+             totalColaboradores = projetos.reduce((acc, p) => acc + (p.aprovados || 0) + (p.totalCandidatos || 0), 0);
         }
 
-        // Preencher Contagem de Projetos
-        (projetos || []).forEach(p => {
-            const data = parseDate(p.dataInicio);
-            if (data) {
-                if (data.getFullYear() === anoAtual) {
-                     const item = resultado.find(r => r.mesIndex === data.getMonth());
-                     if (item) item.Projetos++;
-                }
+        const meses = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
+        const anoAtual = new Date().getFullYear();
+        const projetosPorMes = meses.map((mes, index) => ({ mes, projetos: 0, concluidos: 0 }));
+
+        projetos.forEach(p => {
+            const d = parseDate(p.dataInicio);
+            if (d && d.getFullYear() === anoAtual) {
+                projetosPorMes[d.getMonth()].projetos += 1;
+                if(p.encerrado) projetosPorMes[d.getMonth()].concluidos += 1;
             }
         });
 
-        // Preencher Contagem de Eventos
-        (eventos || []).forEach(ev => {
-            // Log para debug se necessário: console.log("Processando evento:", ev.title, ev.date);
-            const data = parseDate(ev.date);
-            if (data) {
-                // Como parseDate "12 Mar" retorna o ano atual, isso vai contar
-                if (data.getFullYear() === anoAtual) {
-                     const item = resultado.find(r => r.mesIndex === data.getMonth());
-                     if (item) item.Eventos++;
-                }
-            }
+        setRealData({
+            totalProjetos,
+            projetosConcluidos,
+            totalEventos,
+            tecnologiasDominadas: isAluno ? tags.length : 0,
+            colaboradores: totalColaboradores,
+            projetosPorMes
         });
 
-        return resultado;
-    }, [projetos, eventos]);
+    }, [usuario, isAluno]);
 
-    // 2. Processar dados para o gráfico de PIZZA
-    const dadosPizza = useMemo(() => {
-        return [
-            { name: 'Projetos', value: projetos?.length || 0 },
-            { name: 'Eventos', value: eventos?.length || 0 },
-        ].filter(item => item.value > 0);
-    }, [projetos, eventos]);
+    if (!realData) return <p>Carregando dados...</p>;
 
-    const COLORS_PIE = ['#3298EF', '#10b981'];
+    const achievements = [
+        {
+          id: 'primeiro_passo', icon: <FaBullseye />, title: 'Primeiro Passo',
+          description: isAluno ? 'Participou do 1º projeto' : 'Criou a 1ª vaga',
+          condition: (d) => d.totalProjetos >= 1
+        },
+        {
+          id: 'veteran', icon: <FaMedal />, title: 'Veterano',
+          description: 'Mais de 5 projetos no histórico',
+          condition: (d) => d.totalProjetos >= 5
+        },
+        {
+          id: 'networker', icon: <FaUsers />, title: 'Networker',
+          description: isAluno ? 'Participou de 3 eventos' : 'Criou 3 eventos',
+          condition: (d) => d.totalEventos >= 3
+        }
+    ];
+
+    const StatCard = ({ icon, title, value, color }) => (
+        <div className="stat-card" style={{ background: '#fff', padding: '20px', borderRadius: '12px', boxShadow: '0 4px 15px rgba(0,0,0,0.05)', display: 'flex', alignItems: 'center', gap: '15px' }}>
+          <div style={{ backgroundColor: `${color}20`, color, padding: '12px', borderRadius: '10px', display: 'flex', fontSize: '1.5rem' }}>{icon}</div>
+          <div style={{ flex: 1 }}>
+            <h3 style={{ fontSize: '0.9rem', color: '#6b7280', marginBottom: '5px' }}>{title}</h3>
+            <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#1f2937' }}>{value}</div>
+          </div>
+        </div>
+    );
 
     return (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '30px' }}>
-            
-            {/* Gráfico 1: Atividade do Ano */}
-            <div style={{ background: '#fff', padding: '25px', borderRadius: '10px', boxShadow: '0 2px 10px rgba(0,0,0,0.05)' }}>
-                <h3 style={{ marginBottom: '20px', color: '#444' }}>Atividade em {new Date().getFullYear()}</h3>
-                <div style={{ width: '100%', height: 300 }}>
-                    <ResponsiveContainer>
-                        <BarChart data={dadosBarra}>
-                            <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                            <XAxis dataKey="name" axisLine={false} tickLine={false} />
-                            <YAxis axisLine={false} tickLine={false} allowDecimals={false} />
-                            <Tooltip 
-                                contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 2px 8px rgba(0,0,0,0.15)' }}
-                                cursor={{ fill: '#f3f4f6' }}
-                            />
-                            <Legend iconType="circle" />
-                            <Bar dataKey="Projetos" fill="#3298EF" radius={[4, 4, 0, 0]} barSize={30} />
-                            <Bar dataKey="Eventos" fill="#10b981" radius={[4, 4, 0, 0]} barSize={30} />
+        <div className="tab-content">
+             <div className="evolucoes-header" style={{ marginBottom: '30px', textAlign: 'center', position: 'relative' }}>
+                <h1 style={{ fontSize: '2rem', color: '#111827', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}>
+                  <FaRocket style={{ color: '#3298EF' }} />
+                  Evolução {isAluno ? 'Profissional' : 'Empresarial'}
+                </h1>
+                <p style={{ color: '#6b7280' }}>Acompanhe seu crescimento e métricas na plataforma.</p>
+                
+                <button 
+                    className="btn-ver-detalhes-evolucao"
+                    onClick={() => navigate('/evolucao')} 
+                    style={{
+                        marginTop: '15px',
+                        padding: '10px 20px',
+                        backgroundColor: '#3298EF',
+                        color: '#fff',
+                        border: 'none',
+                        borderRadius: '20px',
+                        cursor: 'pointer',
+                        fontSize: '0.9rem',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        transition: 'all 0.2s',
+                        boxShadow: '0 4px 10px rgba(50, 152, 239, 0.3)'
+                    }}
+                >
+                    <FaExternalLinkAlt size={12} />
+                    Ver Análise Detalhada
+                </button>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '20px', marginBottom: '40px' }}>
+                <StatCard icon={<FaBullseye />} title={isAluno ? "Projetos" : "Vagas Criadas"} value={realData.totalProjetos} color="#3298EF" />
+                <StatCard icon={<FaMedal />} title={isAluno ? "Concluídos" : "Encerradas"} value={realData.projetosConcluidos} color="#10b981" />
+                <StatCard icon={<FaCalendarAlt />} title={isAluno ? "Eventos" : "Eventos Criados"} value={realData.totalEventos} color="#f59e0b" />
+                {isAluno ? (
+                    <StatCard icon={<FaBolt />} title="Skills" value={realData.tecnologiasDominadas} color="#8b5cf6" />
+                ) : (
+                    <StatCard icon={<FaUsers />} title="Candidatos" value={realData.colaboradores} color="#ef4444" />
+                )}
+            </div>
+
+            <div className="charts-section" style={{ marginBottom: '40px', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '30px' }}>
+                
+                <div style={{ background: '#fff', padding: '25px', borderRadius: '15px', border: '1px solid #e5e7eb' }}>
+                    <h3 style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px', color: '#374151' }}>
+                        <FaCalendarAlt /> Atividade Mensal ({new Date().getFullYear()})
+                    </h3>
+                    <ResponsiveContainer width="100%" height={300}>
+                        <LineChart data={realData.projetosPorMes}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                        <XAxis dataKey="mes" stroke="#6b7280" />
+                        <YAxis stroke="#6b7280" allowDecimals={false} />
+                        <Tooltip contentStyle={{ backgroundColor: '#fff', borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }} />
+                        <Line type="monotone" dataKey="projetos" name="Ativos" stroke="#3298EF" strokeWidth={3} dot={{ r: 4 }} />
+                        <Line type="monotone" dataKey="concluidos" name="Concluídos" stroke="#10b981" strokeWidth={3} dot={{ r: 4 }} />
+                        </LineChart>
+                    </ResponsiveContainer>
+                </div>
+
+                 <div style={{ background: '#fff', padding: '25px', borderRadius: '15px', border: '1px solid #e5e7eb' }}>
+                    <h3 style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px', color: '#374151' }}>
+                        <FaChartLine /> Resumo Geral
+                    </h3>
+                    <ResponsiveContainer width="100%" height={300}>
+                        <BarChart data={[
+                            { nome: 'Projetos', valor: realData.totalProjetos },
+                            { nome: 'Eventos', valor: realData.totalEventos },
+                            { nome: 'Conclusões', valor: realData.projetosConcluidos }
+                        ]}>
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e5e7eb" />
+                        <XAxis dataKey="nome" stroke="#6b7280" />
+                        <YAxis stroke="#6b7280" />
+                        <Tooltip cursor={{fill: '#f3f4f6'}} contentStyle={{ borderRadius: '8px' }} />
+                        <Bar dataKey="valor" fill="#3298EF" radius={[4, 4, 0, 0]} barSize={50}>
+                            <Cell fill="#3298EF" />
+                            <Cell fill="#f59e0b" />
+                            <Cell fill="#10b981" />
+                        </Bar>
                         </BarChart>
                     </ResponsiveContainer>
                 </div>
             </div>
 
-            {/* Gráfico 2: Pizza */}
-            {(projetos?.length > 0 || eventos?.length > 0) && (
-                <div style={{ background: '#fff', padding: '25px', borderRadius: '10px', boxShadow: '0 2px 10px rgba(0,0,0,0.05)' }}>
-                    <h3 style={{ marginBottom: '20px', color: '#444' }}>Distribuição de Participação</h3>
-                    <div style={{ width: '100%', height: 300 }}>
-                        <ResponsiveContainer>
-                            <PieChart>
-                                <Pie
-                                    data={dadosPizza}
-                                    cx="50%"
-                                    cy="50%"
-                                    innerRadius={60}
-                                    outerRadius={100}
-                                    paddingAngle={5}
-                                    dataKey="value"
-                                >
-                                    {dadosPizza.map((entry, index) => (
-                                        <Cell key={`cell-${index}`} fill={COLORS_PIE[index % COLORS_PIE.length]} />
-                                    ))}
-                                </Pie>
-                                <Tooltip />
-                                <Legend verticalAlign="bottom" height={36}/>
-                            </PieChart>
-                        </ResponsiveContainer>
-                    </div>
+            <div className="achievements-section">
+                <h3 style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px', fontSize: '1.5rem' }}>
+                    <FaBolt style={{ color: '#f59e0b' }} /> Conquistas
+                </h3>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '20px' }}>
+                    {achievements.map((achievement) => {
+                        const isUnlocked = achievement.condition(realData);
+                        return (
+                            <div key={achievement.id} style={{
+                                background: isUnlocked ? 'linear-gradient(135deg, #fff, #f0f9ff)' : '#f3f4f6',
+                                padding: '20px',
+                                borderRadius: '12px',
+                                border: isUnlocked ? '2px solid #3298EF' : '1px solid #e5e7eb',
+                                opacity: isUnlocked ? 1 : 0.6,
+                                position: 'relative'
+                            }}>
+                                <div style={{ fontSize: '2rem', color: isUnlocked ? '#3298EF' : '#9ca3af', marginBottom: '10px' }}>{achievement.icon}</div>
+                                <h4 style={{ color: '#1f2937', marginBottom: '5px' }}>{achievement.title}</h4>
+                                <p style={{ fontSize: '0.9rem', color: '#6b7280' }}>{achievement.description}</p>
+                                {isUnlocked && <div style={{ position: 'absolute', top: '10px', right: '10px', background: '#10b981', color: '#fff', fontSize: '0.7rem', padding: '2px 8px', borderRadius: '10px', fontWeight: 'bold' }}>CONQUISTADO</div>}
+                            </div>
+                        );
+                    })}
                 </div>
-            )}
+            </div>
         </div>
     );
 }
