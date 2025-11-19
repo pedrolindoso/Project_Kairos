@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from "react";
-import "../css/evolucoes.css"; // Importando o CSS novo
+import "../css/evolucoes.css"; 
 import { 
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, 
     LineChart, Line, PieChart, Pie, Cell, Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis
@@ -54,6 +54,73 @@ const formatDateToMonthYear = (date) => {
 
 const COLORS = ['#3298EF', '#312e81', '#1e1b4b', '#0078D1', '#111827', '#6366f1'];
 
+// 🟢 NOVO UTILITÁRIO: Determina se um projeto está concluído pela data
+const isProjectConcluded = (p) => {
+    // Se o backend trouxer 'encerrado' (booleano) use, senão use dataFim
+    if (p.encerrado === true) return true;
+    
+    if (!p.dataFim) return false;
+    const endDate = parseDate(p.dataFim);
+    if (!endDate) return false;
+    
+    // Concluído se a data de fim for anterior à data atual
+    return endDate.getTime() < new Date().getTime();
+};
+
+
+// 🟢 FUNÇÃO DE CÁLCULO DE SKILL (AJUSTADA)
+const calculateSkillProficiency = (projects, allTags, isAluno, totalConcluidos) => {
+    if (!allTags || allTags.length === 0 || !projects) return [];
+
+    const techMap = {};
+    let maxUsage = 0; 
+    
+    // 1. Contar o uso e a conclusão por skill
+    projects.forEach(p => {
+        const pTags = parseTagsString(p.tags);
+        
+        // 🚨 CHAVE DA CORREÇÃO: Usa a nova lógica de conclusão baseada em data/status
+        const isCompleted = isProjectConcluded(p);
+        
+        pTags.forEach(tag => {
+            const cleanTag = tag.trim();
+            if (!techMap[cleanTag]) {
+                techMap[cleanTag] = { usage: 0, completion: 0 };
+            }
+            techMap[cleanTag].usage += 1; 
+            if (isCompleted) {
+                techMap[cleanTag].completion += 1; // Contagem de conclusão real
+            }
+            maxUsage = Math.max(maxUsage, techMap[cleanTag].usage);
+        });
+    });
+
+    const normalizationFactor = maxUsage > 0 ? 100 / maxUsage : 1; 
+    
+    // 2. Aplicar fórmula de score
+    return allTags.map(tag => {
+        const stats = techMap[tag.trim()] || { usage: 0, completion: 0 };
+        let score = 0;
+
+        if (isAluno) {
+            // ALUNO: 40% Base + 60% Ponderado pela Conclusão.
+            const completionRatio = totalConcluidos > 0 ? stats.completion / totalConcluidos : 0;
+            score = 40 + (completionRatio * 60); 
+            // Se completionRatio for zero, o score fica 40 (o que está correto)
+
+        } else {
+            // EMPRESA: Frequência de Demanda
+            score = Math.round(stats.usage * normalizationFactor);
+        }
+
+        return { 
+            nome: tag.trim(), 
+            valor: Math.min(100, Math.max(1, Math.round(score))) 
+        };
+    });
+};
+
+
 const mockDataInicial = {
   totalProjetos: 0,
   projetosConcluidos: 0,
@@ -68,57 +135,6 @@ const mockDataInicial = {
   firstProjectDate: null, 
   firstEventDate: null, 
 };
-
-// --- FUNÇÃO DE CÁLCULO DE SKILL (NOVA) ---
-const calculateSkillProficiency = (projects, allTags, isAluno, totalConcluidos) => {
-    if (!allTags || allTags.length === 0 || !projects) return [];
-
-    const techMap = {};
-    let maxUsage = 0; 
-    
-    // 1. Contar o uso e a conclusão por skill
-    projects.forEach(p => {
-        const pTags = parseTagsString(p.tags);
-        const isCompleted = p.encerrado || p.status === 'CONCLUIDO';
-        
-        pTags.forEach(tag => {
-            const cleanTag = tag.trim();
-            if (!techMap[cleanTag]) {
-                techMap[cleanTag] = { usage: 0, completion: 0 };
-            }
-            techMap[cleanTag].usage += 1; 
-            if (isCompleted) {
-                techMap[cleanTag].completion += 1; 
-            }
-            maxUsage = Math.max(maxUsage, techMap[cleanTag].usage);
-        });
-    });
-
-    const normalizationFactor = maxUsage > 0 ? 100 / maxUsage : 1; 
-    
-    // 2. Aplicar fórmula de score
-    return allTags.map(tag => {
-        const stats = techMap[tag.trim()] || { usage: 0, completion: 0 };
-        let score = 0;
-
-        if (isAluno) {
-            // ALUNO: Base (40%) + 60% Ponderado pela Conclusão.
-            // Ex: Se o aluno concluiu 5 projetos, e usou React em 3 deles, o peso é 3/5.
-            const completionRatio = totalConcluidos > 0 ? stats.completion / totalConcluidos : 0;
-            score = 40 + (completionRatio * 60); 
-
-        } else {
-            // EMPRESA: Demanda (Frequência relativa de uso vs skill mais usada)
-            score = Math.round(stats.usage * normalizationFactor);
-        }
-
-        return { 
-            nome: tag.trim(), 
-            valor: Math.min(100, Math.max(1, Math.round(score))) 
-        };
-    });
-};
-
 
 export default function Evolucao() {
   const [realData, setRealData] = useState(mockDataInicial);
@@ -195,7 +211,8 @@ export default function Evolucao() {
           });
       }
 
-      const projetosConcluidos = projetos.filter(p => p.encerrado || p.status === 'CONCLUIDO').length;
+      // 🚨 CORREÇÃO AQUI: Usa a nova função para calcular o divisor (total de projetos válidos)
+      const projetosConcluidos = projetos.filter(p => isProjectConcluded(p)).length;
       
       const firstProject = projetos.length > 0
           ? projetos.map(p => parseDate(p.dataInicio)).filter(d => d).sort((a, b) => a - b)[0]
@@ -205,6 +222,7 @@ export default function Evolucao() {
           ? eventos.map(e => parseDate(e.date)).filter(d => d).sort((a, b) => a - b)[0]
           : null;
 
+
       const mesesLabels = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
       const mesesMap = {};
       mesesLabels.forEach(m => mesesMap[m] = { mes: m, projetos: 0, eventos: 0, concluidos: 0 }); 
@@ -213,7 +231,7 @@ export default function Evolucao() {
           const d = parseDate(p.dataInicio);
           if (d && d.getFullYear() === new Date().getFullYear()) {
               mesesMap[mesesLabels[d.getMonth()]].projetos += 1;
-              if (p.encerrado || p.status === 'CONCLUIDO') { 
+              if (isProjectConcluded(p)) { 
                   mesesMap[mesesLabels[d.getMonth()]].concluidos += 1;
               }
           }
@@ -228,7 +246,7 @@ export default function Evolucao() {
 
       const graficosData = Object.values(mesesMap);
 
-      // CÁLCULO REAL DE SKILLS
+      // 🚨 CÁLCULO REAL DE SKILLS
       const tecnologiasData = calculateSkillProficiency(projetos, Array.from(tagsSet), userData.role === 'ROLE_ALUNO', projetosConcluidos);
 
 
