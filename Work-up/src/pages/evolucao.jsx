@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from "react";
 import "../css/evolucoes.css"; // Importando o CSS novo
 import { 
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, 
-    LineChart, Line, PieChart, Pie, Cell
+    LineChart, Line, PieChart, Pie, Cell, Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis
 } from "recharts";
 import { 
     FaRocket, FaChartLine, FaBullseye, FaMedal, FaClock, FaUsers, 
@@ -41,15 +41,15 @@ const parseDate = (dateData) => {
     } catch (e) { return null; }
 };
 
-const formatDateToMonthYear = (date) => {
-    if (!date) return "Pendente";
-    return date.toLocaleDateString('pt-BR', { year: 'numeric', month: 'long' });
-};
-
 const formatRegistrationDate = (dateString) => {
     const date = parseDate(dateString);
     if (!date) return "Data Indisponível";
     return date.toLocaleDateString('pt-BR', { year: 'numeric', month: '2-digit', day: '2-digit' });
+};
+
+const formatDateToMonthYear = (date) => {
+    if (!date) return "Pendente";
+    return date.toLocaleDateString('pt-BR', { year: 'numeric', month: 'long' });
 };
 
 const COLORS = ['#3298EF', '#312e81', '#1e1b4b', '#0078D1', '#111827', '#6366f1'];
@@ -57,11 +57,11 @@ const COLORS = ['#3298EF', '#312e81', '#1e1b4b', '#0078D1', '#111827', '#6366f1'
 const mockDataInicial = {
   totalProjetos: 0,
   projetosConcluidos: 0,
-  totalEventos: 0,
   duracaoMedia: 0,
   tecnologiasDominadas: 0,
   colaboradores: 0,
   avaliacaoMedia: 0,
+  totalEventos: 0, 
   projetosPorMes: [],
   tecnologias: [],
   habilidades: [],
@@ -69,12 +69,12 @@ const mockDataInicial = {
   firstEventDate: null, 
 };
 
-// --- LÓGICA DE CÁLCULO DE SKILL ---
+// --- FUNÇÃO DE CÁLCULO DE SKILL (NOVA) ---
 const calculateSkillProficiency = (projects, allTags, isAluno, totalConcluidos) => {
     if (!allTags || allTags.length === 0 || !projects) return [];
 
     const techMap = {};
-    let maxUsage = 0;
+    let maxUsage = 0; 
     
     // 1. Contar o uso e a conclusão por skill
     projects.forEach(p => {
@@ -88,7 +88,7 @@ const calculateSkillProficiency = (projects, allTags, isAluno, totalConcluidos) 
             }
             techMap[cleanTag].usage += 1; 
             if (isCompleted) {
-                techMap[cleanTag].completion += 1;
+                techMap[cleanTag].completion += 1; 
             }
             maxUsage = Math.max(maxUsage, techMap[cleanTag].usage);
         });
@@ -102,8 +102,8 @@ const calculateSkillProficiency = (projects, allTags, isAluno, totalConcluidos) 
         let score = 0;
 
         if (isAluno) {
-            // ALUNO: Pondera a conclusão (até 60%) + Base (40%). 
-            // Reflecte a experiência prática.
+            // ALUNO: Base (40%) + 60% Ponderado pela Conclusão.
+            // Ex: Se o aluno concluiu 5 projetos, e usou React em 3 deles, o peso é 3/5.
             const completionRatio = totalConcluidos > 0 ? stats.completion / totalConcluidos : 0;
             score = 40 + (completionRatio * 60); 
 
@@ -113,8 +113,8 @@ const calculateSkillProficiency = (projects, allTags, isAluno, totalConcluidos) 
         }
 
         return { 
-            nome: tag, 
-            valor: Math.min(100, Math.max(1, Math.round(score)))
+            nome: tag.trim(), 
+            valor: Math.min(100, Math.max(1, Math.round(score))) 
         };
     });
 };
@@ -205,17 +205,15 @@ export default function Evolucao() {
           ? eventos.map(e => parseDate(e.date)).filter(d => d).sort((a, b) => a - b)[0]
           : null;
 
-
-      // Agrupamento por Mês
       const mesesLabels = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
       const mesesMap = {};
-      mesesLabels.forEach(m => mesesMap[m] = { mes: m, projetos: 0, eventos: 0, concluidos: 0 }); // Inclui 'concluidos' aqui
+      mesesLabels.forEach(m => mesesMap[m] = { mes: m, projetos: 0, eventos: 0, concluidos: 0 }); 
 
       projetos.forEach(p => {
           const d = parseDate(p.dataInicio);
           if (d && d.getFullYear() === new Date().getFullYear()) {
               mesesMap[mesesLabels[d.getMonth()]].projetos += 1;
-              if (p.encerrado || p.status === 'CONCLUIDO') { // Contando conclusões/encerramentos no mês de início
+              if (p.encerrado || p.status === 'CONCLUIDO') { 
                   mesesMap[mesesLabels[d.getMonth()]].concluidos += 1;
               }
           }
@@ -243,7 +241,7 @@ export default function Evolucao() {
           colaboradores: userData.role === 'ROLE_EMPRESA' ? projetos.reduce((acc, p) => acc + (p.totalCandidatos || 0), 0) : 0,
           avaliacaoMedia: 4.8,
           projetosPorMes: graficosData,
-          tecnologias: tecnologiasData, // USANDO DADOS REAIS
+          tecnologias: tecnologiasData, 
           firstProjectDate: firstProject,
           firstEventDate: firstEvent
       };
@@ -255,6 +253,7 @@ export default function Evolucao() {
       setLoading(false);
     }
   };
+
 
   if (loading) {
     return <div className="loading-container"><p>Carregando Dashboard...</p></div>;
@@ -426,6 +425,7 @@ export default function Evolucao() {
                   <Tooltip contentStyle={{ backgroundColor: '#fff', borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }} />
                   <Line type="monotone" dataKey="projetos" name="Projetos" stroke="#3298EF" strokeWidth={3} dot={{ fill: '#3298EF', r: 4 }} />
                   <Line type="monotone" dataKey="concluidos" name="Concluídos" stroke="#10b981" strokeWidth={3} dot={{ fill: '#10b981', r: 4 }} />
+                  <Line type="monotone" dataKey="eventos" name="Eventos" stroke="#f59e0b" strokeWidth={3} dot={{ fill: '#f59e0b', r: 4 }} />
                 </LineChart>
               </ResponsiveContainer>
             </div>
