@@ -464,8 +464,8 @@ export default function Evolucao() {
                  <div style={{ marginTop: '20px', textAlign: 'center' }}>
                      <small style={{ color: '#6b7280', fontSize: '0.85rem', fontStyle: 'italic' }}>
                          {isAluno 
-                            ? "* Cálculo baseado na frequência das tecnologias citadas no seu perfil e nos projetos que você participa."
-                            : "* Cálculo baseado nas tecnologias exigidas nos projetos e vagas criados pela sua empresa."
+                            ? "Cálculo baseado na frequência das tecnologias citadas no seu perfil e nos projetos que você participa."
+                            : "Cálculo baseado nas tecnologias exigidas nos projetos e vagas criados pela sua empresa."
                          }
                      </small>
                  </div>
