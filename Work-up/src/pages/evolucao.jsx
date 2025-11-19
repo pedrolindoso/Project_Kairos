@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useMemo } from "react";
-import "../css/evolucoes.css";
+import "../css/evolucoes.css"; // Importando o CSS novo
 import { 
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, 
-    LineChart, Line, PieChart, Pie, Cell, Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis
+    LineChart, Line, PieChart, Pie, Cell
 } from "recharts";
 import { 
     FaRocket, FaChartLine, FaBullseye, FaMedal, FaClock, FaUsers, 
@@ -10,6 +10,7 @@ import {
 } from "react-icons/fa";
 import api from "../service/api";
 
+// --- UTILITÁRIOS ---
 const parseTagsString = (tagsString) => {
     if (Array.isArray(tagsString)) return tagsString;
     if (!tagsString || typeof tagsString !== 'string') return [];
@@ -40,15 +41,15 @@ const parseDate = (dateData) => {
     } catch (e) { return null; }
 };
 
+const formatDateToMonthYear = (date) => {
+    if (!date) return "Pendente";
+    return date.toLocaleDateString('pt-BR', { year: 'numeric', month: 'long' });
+};
+
 const formatRegistrationDate = (dateString) => {
     const date = parseDate(dateString);
     if (!date) return "Data Indisponível";
     return date.toLocaleDateString('pt-BR', { year: 'numeric', month: '2-digit', day: '2-digit' });
-};
-
-const formatDateToMonthYear = (date) => {
-    if (!date) return "Pendente";
-    return date.toLocaleDateString('pt-BR', { year: 'numeric', month: 'long' });
 };
 
 const COLORS = ['#3298EF', '#312e81', '#1e1b4b', '#0078D1', '#111827', '#6366f1'];
@@ -56,17 +57,68 @@ const COLORS = ['#3298EF', '#312e81', '#1e1b4b', '#0078D1', '#111827', '#6366f1'
 const mockDataInicial = {
   totalProjetos: 0,
   projetosConcluidos: 0,
+  totalEventos: 0,
   duracaoMedia: 0,
   tecnologiasDominadas: 0,
   colaboradores: 0,
   avaliacaoMedia: 0,
-  totalEventos: 0, 
   projetosPorMes: [],
   tecnologias: [],
   habilidades: [],
   firstProjectDate: null, 
   firstEventDate: null, 
 };
+
+// --- LÓGICA DE CÁLCULO DE SKILL ---
+const calculateSkillProficiency = (projects, allTags, isAluno, totalConcluidos) => {
+    if (!allTags || allTags.length === 0 || !projects) return [];
+
+    const techMap = {};
+    let maxUsage = 0;
+    
+    // 1. Contar o uso e a conclusão por skill
+    projects.forEach(p => {
+        const pTags = parseTagsString(p.tags);
+        const isCompleted = p.encerrado || p.status === 'CONCLUIDO';
+        
+        pTags.forEach(tag => {
+            const cleanTag = tag.trim();
+            if (!techMap[cleanTag]) {
+                techMap[cleanTag] = { usage: 0, completion: 0 };
+            }
+            techMap[cleanTag].usage += 1; 
+            if (isCompleted) {
+                techMap[cleanTag].completion += 1;
+            }
+            maxUsage = Math.max(maxUsage, techMap[cleanTag].usage);
+        });
+    });
+
+    const normalizationFactor = maxUsage > 0 ? 100 / maxUsage : 1; 
+    
+    // 2. Aplicar fórmula de score
+    return allTags.map(tag => {
+        const stats = techMap[tag.trim()] || { usage: 0, completion: 0 };
+        let score = 0;
+
+        if (isAluno) {
+            // ALUNO: Pondera a conclusão (até 60%) + Base (40%). 
+            // Reflecte a experiência prática.
+            const completionRatio = totalConcluidos > 0 ? stats.completion / totalConcluidos : 0;
+            score = 40 + (completionRatio * 60); 
+
+        } else {
+            // EMPRESA: Demanda (Frequência relativa de uso vs skill mais usada)
+            score = Math.round(stats.usage * normalizationFactor);
+        }
+
+        return { 
+            nome: tag, 
+            valor: Math.min(100, Math.max(1, Math.round(score)))
+        };
+    });
+};
+
 
 export default function Evolucao() {
   const [realData, setRealData] = useState(mockDataInicial);
@@ -75,6 +127,7 @@ export default function Evolucao() {
   const [userName, setUserName] = useState("");
   const [userData, setUserData] = useState({});
 
+  // --- SISTEMA DE CONQUISTAS ---
   const achievements = [
     {
       id: 'primeiro_passo',
@@ -153,14 +206,18 @@ export default function Evolucao() {
           : null;
 
 
+      // Agrupamento por Mês
       const mesesLabels = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
       const mesesMap = {};
-      mesesLabels.forEach(m => mesesMap[m] = { mes: m, projetos: 0, eventos: 0 });
+      mesesLabels.forEach(m => mesesMap[m] = { mes: m, projetos: 0, eventos: 0, concluidos: 0 }); // Inclui 'concluidos' aqui
 
       projetos.forEach(p => {
           const d = parseDate(p.dataInicio);
           if (d && d.getFullYear() === new Date().getFullYear()) {
               mesesMap[mesesLabels[d.getMonth()]].projetos += 1;
+              if (p.encerrado || p.status === 'CONCLUIDO') { // Contando conclusões/encerramentos no mês de início
+                  mesesMap[mesesLabels[d.getMonth()]].concluidos += 1;
+              }
           }
       });
 
@@ -173,6 +230,10 @@ export default function Evolucao() {
 
       const graficosData = Object.values(mesesMap);
 
+      // CÁLCULO REAL DE SKILLS
+      const tecnologiasData = calculateSkillProficiency(projetos, Array.from(tagsSet), userData.role === 'ROLE_ALUNO', projetosConcluidos);
+
+
       const processedData = {
           totalProjetos: projetos.length,
           projetosConcluidos,
@@ -182,7 +243,7 @@ export default function Evolucao() {
           colaboradores: userData.role === 'ROLE_EMPRESA' ? projetos.reduce((acc, p) => acc + (p.totalCandidatos || 0), 0) : 0,
           avaliacaoMedia: 4.8,
           projetosPorMes: graficosData,
-          tecnologias: Array.from(tagsSet).map(t => ({ nome: t, valor: Math.floor(Math.random() * 60) + 40 })).slice(0, 5),
+          tecnologias: tecnologiasData, // USANDO DADOS REAIS
           firstProjectDate: firstProject,
           firstEventDate: firstEvent
       };
@@ -195,9 +256,6 @@ export default function Evolucao() {
     }
   };
 
-  const animateNumbers = () => {
-  };
-
   if (loading) {
     return <div className="loading-container"><p>Carregando Dashboard...</p></div>;
   }
@@ -206,6 +264,7 @@ export default function Evolucao() {
     <div className="evolucoes-page">
       <div className="container">
         
+        {/* HEADER COM ANIMAÇÃO FLUTUANTE */}
         <div className="evolucoes-header">
           <div className="header-content">
             <h1 className="page-title">
@@ -225,6 +284,7 @@ export default function Evolucao() {
           </div>
         </div>
 
+        {/* TIMELINE REAL (Sua Jornada) */}
         <div className="progress-timeline">
           <div className="timeline-header">
             <h3><FaChartLine /> Linha do Tempo da Evolução</h3>
@@ -232,6 +292,7 @@ export default function Evolucao() {
           </div>
           <div className="timeline-container">
             
+            {/* 1. Início da Jornada (Cadastro) */}
             <div className="timeline-item">
               <div className="timeline-dot active"></div>
               <div className="timeline-content">
@@ -243,6 +304,7 @@ export default function Evolucao() {
               </div>
             </div>
 
+            {/* 2. Primeiro Projeto */}
             <div className="timeline-item">
               <div className={`timeline-dot ${realData.totalProjetos >= 1 ? 'active' : ''}`}></div>
               <div className="timeline-content">
@@ -266,6 +328,7 @@ export default function Evolucao() {
               </div>
             </div>
 
+            {/* 4. Veterano (Meta) */}
             <div className="timeline-item">
               <div className={`timeline-dot ${realData.projetosConcluidos >= 5 ? 'active' : ''}`}></div>
               <div className="timeline-content">
@@ -278,6 +341,7 @@ export default function Evolucao() {
           </div>
         </div>
 
+        {/* CARDS DE ESTATÍSTICAS (GRID) */}
         <div className="stats-grid">
           <div className="stat-card">
             <div className="stat-icon" style={{backgroundColor: '#e0f2fe', color: '#3298EF'}}>
@@ -348,22 +412,25 @@ export default function Evolucao() {
           )}
         </div>
 
+        {/* SEÇÃO DE GRÁFICOS */}
         <div className="charts-section">
           <div className="chart-row">
+            {/* Gráfico de Linha */}
             <div className="chart-container">
-                <FaCalendarAlt /> Atividade Mensal ({new Date().getFullYear()})
-                <ResponsiveContainer width="100%" height={300}>
+              <h3><FaCalendarAlt className="chart-icon" /> Atividade Mensal ({new Date().getFullYear()})</h3>
+              <ResponsiveContainer width="100%" height={300}>
                 <LineChart data={realData.projetosPorMes}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
                   <XAxis dataKey="mes" stroke="#6b7280" />
                   <YAxis stroke="#6b7280" allowDecimals={false} />
                   <Tooltip contentStyle={{ backgroundColor: '#fff', borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }} />
                   <Line type="monotone" dataKey="projetos" name="Projetos" stroke="#3298EF" strokeWidth={3} dot={{ fill: '#3298EF', r: 4 }} />
-                  <Line type="monotone" dataKey="eventos" name="Eventos" stroke="#10b981" strokeWidth={3} dot={{ fill: '#10b981', r: 4 }} />
+                  <Line type="monotone" dataKey="concluidos" name="Concluídos" stroke="#10b981" strokeWidth={3} dot={{ fill: '#10b981', r: 4 }} />
                 </LineChart>
               </ResponsiveContainer>
             </div>
             
+            {/* Gráfico de Barras / Skills */}
             <div className="chart-container">
               <h3><FaChartLine className="chart-icon" /> Performance Geral</h3>
               <ResponsiveContainer width="100%" height={300}>
@@ -385,12 +452,10 @@ export default function Evolucao() {
             </div>
           </div>
 
+          {/* Nova Seção de Skills (Barras de Progresso) usando CSS novo */}
           {userRole === 'ROLE_ALUNO' && realData.tecnologias.length > 0 && (
              <div className="tech-skills">
-                 <h3><FaCode className="chart-icon" /> Habilidades em Destaque</h3>
-                 <p className="skills-description">
-                     A proficiência é calculada por um algoritmo interno que considera a frequência de uso, o número de projetos concluídos com a skill e a diversidade de experiências na plataforma.
-                 </p>
+                 <h3><FaCode className="chart-icon" /> Stack Tecnológica</h3>
                  <div className="tech-list">
                      {realData.tecnologias.map((tech, index) => (
                          <div key={index} className="tech-item">
@@ -410,6 +475,7 @@ export default function Evolucao() {
           )}
         </div>
 
+        {/* CONQUISTAS */}
         <div className="achievements-section">
           <h3><FaBolt className="section-icon" /> Conquistas Desbloqueadas</h3>
           <div className="achievements-grid">
