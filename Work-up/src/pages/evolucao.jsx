@@ -379,9 +379,9 @@ export default function Evolucao() {
                   <XAxis dataKey="mes" stroke="#6b7280" />
                   <YAxis stroke="#6b7280" allowDecimals={false} />
                   <Tooltip contentStyle={{ backgroundColor: '#fff', borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }} />
-                  <Line type="monotone" dataKey="projetos" name="Projetos" stroke="#3298EF" strokeWidth={3} dot={{ fill: '#3298EF', r: 4 }} />
+                  <Line type="monotone" dataKey="eventos" name="Eventos" stroke="#F53E3EFF" strokeWidth={3} dot={{ fill: '#F53E3EFF', r: 4 }} />
                   <Line type="monotone" dataKey="concluidos" name="Concluídos" stroke="#10b981" strokeWidth={3} dot={{ fill: '#10b981', r: 4 }} />
-                  <Line type="monotone" dataKey="eventos" name="Eventos" stroke="#f59e0b" strokeWidth={3} dot={{ fill: '#f59e0b', r: 4 }} />
+                  <Line type="monotone" dataKey="projetos" name="Projetos" stroke="#3298EF" strokeWidth={3} dot={{ fill: '#3298EF', r: 4 }} />
                 </LineChart>
               </ResponsiveContainer>
             </div>
