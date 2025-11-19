@@ -6,7 +6,7 @@ import {
 } from "recharts";
 import { 
     FaRocket, FaChartLine, FaBullseye, FaMedal, FaUsers, 
-    FaCalendarAlt, FaArrowUp, FaBolt, FaCode
+    FaCalendarAlt, FaArrowUp, FaBolt, FaCode, FaChevronDown, FaChevronUp
 } from "react-icons/fa";
 import api from "../service/api";
 
@@ -58,13 +58,11 @@ const isProjectConcluded = (p) => {
 
 const COLORS = ['#3298EF', '#312e81', '#1e1b4b', '#0078D1', '#111827', '#6366f1'];
 
-// 🟢 NOVA FUNÇÃO DE CÁLCULO (Tags Perfil + Tags Projetos)
-// Recebe uma lista bruta com todas as tags encontradas e calcula a % de frequência
+// 🟢 FUNÇÃO DE CÁLCULO
 const calculateStackPercentages = (allTagsList) => {
     const counts = {};
     let totalOccurrences = 0;
 
-    // Conta quantas vezes cada tecnologia aparece no total
     allTagsList.forEach(tag => {
         const cleanTag = tag.trim();
         if (cleanTag) {
@@ -75,11 +73,10 @@ const calculateStackPercentages = (allTagsList) => {
 
     if (totalOccurrences === 0) return [];
 
-    // Calcula a % com base no total de menções
     return Object.keys(counts).map(tag => ({
         nome: tag,
         valor: Math.round((counts[tag] / totalOccurrences) * 100)
-    })).sort((a, b) => b.valor - a.valor); // Ordena da maior % para a menor
+    })).sort((a, b) => b.valor - a.valor);
 };
 
 
@@ -104,8 +101,10 @@ export default function Evolucao() {
   const [userRole, setUserRole] = useState(null);
   const [userName, setUserName] = useState("");
   const [userData, setUserData] = useState({});
+  
+  // 🟢 NOVO ESTADO: Controla se mostra todas as tecnologias ou só as top 6
+  const [showAllTech, setShowAllTech] = useState(false);
 
-  // --- SISTEMA DE CONQUISTAS ---
   const achievements = [
     {
       id: 'primeiro_passo',
@@ -154,11 +153,7 @@ export default function Evolucao() {
 
       let projetos = [];
       let eventos = [];
-      
-      // Array mestre para o cálculo de porcentagem (Stack)
       let allTagsForCalculation = []; 
-      
-      // Set para contagem simples de tecnologias únicas (Card de Estatística)
       let uniqueTagsSet = new Set(); 
 
       if (userData.role === 'ROLE_ALUNO') {
@@ -166,12 +161,10 @@ export default function Evolucao() {
           const evRes = await api.get('/api/eventos/minhas-inscricoes', { headers: { Authorization: `Bearer ${token}` } });
           eventos = evRes.data || [];
           
-          // 1. Adicionar Habilidades do Perfil (Input do Aluno)
           const perfilTags = parseTagsString(userData.aluno?.tags);
           allTagsForCalculation = [...allTagsForCalculation, ...perfilTags];
           perfilTags.forEach(t => uniqueTagsSet.add(t));
           
-          // 2. Adicionar Tags dos Projetos Inscritos
           projetos.forEach(p => {
               const pTags = parseTagsString(p.tags);
               allTagsForCalculation = [...allTagsForCalculation, ...pTags];
@@ -201,7 +194,6 @@ export default function Evolucao() {
           ? eventos.map(e => parseDate(e.date)).filter(d => d).sort((a, b) => a - b)[0]
           : null;
 
-      // Gráfico mensal
       const mesesLabels = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
       const mesesMap = {};
       mesesLabels.forEach(m => mesesMap[m] = { mes: m, projetos: 0, eventos: 0, concluidos: 0 }); 
@@ -225,7 +217,6 @@ export default function Evolucao() {
 
       const graficosData = Object.values(mesesMap);
 
-      // 🟢 CÁLCULO DA STACK (USANDO A LISTA COMBINADA)
       const tecnologiasStack = calculateStackPercentages(allTagsForCalculation);
 
       const processedData = {
@@ -255,11 +246,16 @@ export default function Evolucao() {
     return <div className="loading-container"><p>Carregando Dashboard...</p></div>;
   }
 
+  // 🟢 Lógica para filtrar quantas mostrar
+  const displayedTechs = showAllTech 
+      ? realData.tecnologias 
+      : realData.tecnologias.slice(0, 6);
+
   return (
     <div className="evolucoes-page">
       <div className="container">
         
-        {/* HEADER COM ANIMAÇÃO FLUTUANTE */}
+        {/* HEADER */}
         <div className="evolucoes-header">
           <div className="header-content">
             <h1 className="page-title">
@@ -279,51 +275,40 @@ export default function Evolucao() {
           </div>
         </div>
 
-        {/* TIMELINE REAL (Sua Jornada) */}
+        {/* TIMELINE */}
         <div className="progress-timeline">
           <div className="timeline-header">
             <h3><FaChartLine /> Linha do Tempo da Evolução</h3>
             <p>Marcos importantes da sua trajetória</p>
           </div>
           <div className="timeline-container">
-            
-            {/* 1. Início da Jornada (Cadastro) */}
             <div className="timeline-item">
               <div className="timeline-dot active"></div>
               <div className="timeline-content">
                 <h4>Início da Jornada</h4>
                 <p>Cadastro na plataforma</p>
-                <span className="timeline-date">
-                    {formatRegistrationDate(userData.dataCadastro)}
-                </span>
+                <span className="timeline-date">{formatRegistrationDate(userData.dataCadastro)}</span>
               </div>
             </div>
 
-            {/* 2. Primeiro Projeto */}
             <div className="timeline-item">
               <div className={`timeline-dot ${realData.totalProjetos >= 1 ? 'active' : ''}`}></div>
               <div className="timeline-content">
                 <h4>Primeiro Projeto</h4>
                 <p>{userRole === 'ROLE_ALUNO' ? 'Inscrição' : 'Criação'}</p>
-                <span className="timeline-date">
-                    {formatRegistrationDate(realData.firstProjectDate) || 'Pendente'}
-                </span>
+                <span className="timeline-date">{formatRegistrationDate(realData.firstProjectDate) || 'Pendente'}</span>
               </div>
             </div>
 
-            {/* 3. Networking (Primeiro Evento) */}
             <div className="timeline-item">
               <div className={`timeline-dot ${realData.totalEventos >= 1 ? 'active' : ''}`}></div>
               <div className="timeline-content">
                 <h4>Networking</h4>
                 <p>Participação no 1º Evento</p>
-                <span className="timeline-date">
-                    {formatRegistrationDate(realData.firstEventDate) || 'Pendente'}
-                </span>
+                <span className="timeline-date">{formatRegistrationDate(realData.firstEventDate) || 'Pendente'}</span>
               </div>
             </div>
 
-            {/* 4. Veterano (Meta) */}
             <div className="timeline-item">
               <div className={`timeline-dot ${realData.projetosConcluidos >= 5 ? 'active' : ''}`}></div>
               <div className="timeline-content">
@@ -332,85 +317,58 @@ export default function Evolucao() {
                 <span className="timeline-date">Meta</span>
               </div>
             </div>
-
           </div>
         </div>
 
-        {/* CARDS DE ESTATÍSTICAS (GRID) */}
+        {/* CARDS */}
         <div className="stats-grid">
           <div className="stat-card">
-            <div className="stat-icon" style={{backgroundColor: '#e0f2fe', color: '#3298EF'}}>
-                <FaBullseye />
-            </div>
+            <div className="stat-icon" style={{backgroundColor: '#e0f2fe', color: '#3298EF'}}><FaBullseye /></div>
             <div className="stat-content">
                 <h3>{userRole === 'ROLE_ALUNO' ? "Projetos" : "Vagas"}</h3>
-                <div className="stat-value">
-                    <span>{realData.totalProjetos}</span>
-                    <span className="stat-suffix">ativos</span>
-                </div>
+                <div className="stat-value"><span>{realData.totalProjetos}</span><span className="stat-suffix">ativos</span></div>
                 <div className="stat-trend"><FaArrowUp /> Atividade Recente</div>
             </div>
           </div>
 
           <div className="stat-card">
-            <div className="stat-icon" style={{backgroundColor: '#dcfce7', color: '#10b981'}}>
-                <FaMedal />
-            </div>
+            <div className="stat-icon" style={{backgroundColor: '#dcfce7', color: '#10b981'}}><FaMedal /></div>
             <div className="stat-content">
                 <h3>{userRole === 'ROLE_ALUNO' ? "Concluídos" : "Encerradas"}</h3>
-                <div className="stat-value">
-                    <span>{realData.projetosConcluidos}</span>
-                    <span className="stat-suffix">total</span>
-                </div>
+                <div className="stat-value"><span>{realData.projetosConcluidos}</span><span className="stat-suffix">total</span></div>
             </div>
           </div>
 
           <div className="stat-card">
-             <div className="stat-icon" style={{backgroundColor: '#fef3c7', color: '#f59e0b'}}>
-                <FaCalendarAlt />
-            </div>
+             <div className="stat-icon" style={{backgroundColor: '#fef3c7', color: '#f59e0b'}}><FaCalendarAlt /></div>
             <div className="stat-content">
                 <h3>Eventos</h3>
-                <div className="stat-value">
-                    <span>{realData.totalEventos}</span>
-                    <span className="stat-suffix">inscritos</span>
-                </div>
+                <div className="stat-value"><span>{realData.totalEventos}</span><span className="stat-suffix">inscritos</span></div>
             </div>
           </div>
 
           <div className="stat-card">
-             <div className="stat-icon" style={{backgroundColor: '#ede9fe', color: '#8b5cf6'}}>
-                <FaBolt />
-            </div>
+             <div className="stat-icon" style={{backgroundColor: '#ede9fe', color: '#8b5cf6'}}><FaBolt /></div>
             <div className="stat-content">
                 <h3>Tecnologias</h3>
-                <div className="stat-value">
-                    <span>{realData.tecnologiasDominadas}</span>
-                    <span className="stat-suffix">skills</span>
-                </div>
+                <div className="stat-value"><span>{realData.tecnologiasDominadas}</span><span className="stat-suffix">skills</span></div>
             </div>
           </div>
           
           {userRole === 'ROLE_EMPRESA' && (
              <div className="stat-card">
-                <div className="stat-icon" style={{backgroundColor: '#fee2e2', color: '#ef4444'}}>
-                    <FaUsers />
-                </div>
+                <div className="stat-icon" style={{backgroundColor: '#fee2e2', color: '#ef4444'}}><FaUsers /></div>
                 <div className="stat-content">
                     <h3>Candidatos</h3>
-                    <div className="stat-value">
-                        <span>{realData.colaboradores}</span>
-                        <span className="stat-suffix">total</span>
-                    </div>
+                    <div className="stat-value"><span>{realData.colaboradores}</span><span className="stat-suffix">total</span></div>
                 </div>
             </div>
           )}
         </div>
 
-        {/* SEÇÃO DE GRÁFICOS */}
+        {/* GRÁFICOS E SKILLS */}
         <div className="charts-section">
           <div className="chart-row">
-            {/* Gráfico de Linha */}
             <div className="chart-container">
               <h3><FaCalendarAlt className="chart-icon" /> Atividade Mensal ({new Date().getFullYear()})</h3>
               <ResponsiveContainer width="100%" height={300}>
@@ -426,7 +384,6 @@ export default function Evolucao() {
               </ResponsiveContainer>
             </div>
             
-            {/* Gráfico de Barras / Skills */}
             <div className="chart-container">
               <h3><FaChartLine className="chart-icon" /> Performance Geral</h3>
               <ResponsiveContainer width="100%" height={300}>
@@ -448,17 +405,17 @@ export default function Evolucao() {
             </div>
           </div>
 
-          {/* 🟢 NOVA Seção de Skills RESTAURADA (Estrutura HTML Original) */}
+          {/* 🟢 Seção de Afinidade Tecnológica */}
           {realData.tecnologias.length > 0 && (
              <div className="tech-skills">
-                 <h3><FaCode className="chart-icon" /> Stack Tecnológica</h3>
+                 <h3><FaCode className="chart-icon" /> Radar de Habilidades</h3>
+                 
                  <div className="tech-list">
-                     {realData.tecnologias.map((tech, index) => (
+                     {displayedTechs.map((tech, index) => (
                          <div key={index} className="tech-item">
                              <div style={{width: '100%'}}>
                                  <div className="tech-info">
                                      <span className="tech-name">{tech.nome}</span>
-                                     {/* Exibe a porcentagem calculada */}
                                      <span className="tech-level">{tech.valor}%</span>
                                  </div>
                                  <div className="tech-bar">
@@ -467,6 +424,39 @@ export default function Evolucao() {
                              </div>
                          </div>
                      ))}
+                 </div>
+                 
+                 {/* 🟢 BOTÃO VER MAIS / VER MENOS */}
+                 {realData.tecnologias.length > 6 && (
+                    <div style={{ display: 'flex', justifyContent: 'center', marginTop: '15px' }}>
+                        <button 
+                            onClick={() => setShowAllTech(!showAllTech)}
+                            style={{
+                                background: 'transparent',
+                                border: 'none',
+                                color: '#3298EF',
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '5px',
+                                fontWeight: 'bold',
+                                fontSize: '0.9rem'
+                            }}
+                        >
+                            {showAllTech ? (
+                                <>Ver menos <FaChevronUp size={12} /></>
+                            ) : (
+                                <>Ver mais ({realData.tecnologias.length - 6}) <FaChevronDown size={12} /></>
+                            )}
+                        </button>
+                    </div>
+                 )}
+
+                 {/* Rodapé Explicativo */}
+                 <div style={{ marginTop: '20px', textAlign: 'center' }}>
+                     <small style={{ color: '#6b7280', fontSize: '0.85rem', fontStyle: 'italic' }}>
+                         O cálculo é baseado na frequência das tecnologias citadas no seu perfil e nos projetos que você participa.
+                     </small>
                  </div>
              </div>
           )}
