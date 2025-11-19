@@ -387,7 +387,7 @@ export default function Evolucao() {
 
           {userRole === 'ROLE_ALUNO' && realData.tecnologias.length > 0 && (
              <div className="tech-skills">
-                 <h3><FaCode className="chart-icon" /> Stack Tecnológica</h3>
+                 <h3><FaCode className="chart-icon" /> Habilidades em Destaque</h3>
                  <div className="tech-list">
                      {realData.tecnologias.map((tech, index) => (
                          <div key={index} className="tech-item">
