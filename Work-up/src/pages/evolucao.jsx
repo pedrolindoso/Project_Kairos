@@ -251,6 +251,32 @@ export default function Evolucao() {
       
   const isAluno = userRole === 'ROLE_ALUNO';
 
+  // =========================================================================
+  // 🚩 CÁLCULO DE PROGRESSO PARA A LINHA DO TEMPO 🚩
+  // =========================================================================
+
+  const activeTimelineItems = [
+      true, // 1. Início da Jornada (Sempre ativo se está logado)
+      realData.totalProjetos >= 1, // 2. Primeiro Projeto
+      realData.totalEventos >= 1, // 3. Networking
+      realData.projetosConcluidos >= 5 // 4. Veterano (Meta)
+  ];
+
+  const totalItems = activeTimelineItems.length; // 4
+  const completedItems = activeTimelineItems.filter(item => item).length;
+  
+  let progressPercentage = 0;
+
+  if (completedItems > 1) {
+      progressPercentage = Math.round(((completedItems - 1) / (totalItems - 1)) * 100);
+  } else if (completedItems === 1) {
+      progressPercentage = 0;
+  }
+  
+  // =========================================================================
+  // 🚩 FIM DO CÁLCULO DE PROGRESSO 🚩
+  // =========================================================================
+
   return (
     <div className="evolucoes-page">
       <div className="container">
@@ -311,6 +337,21 @@ export default function Evolucao() {
             <p>Marcos importantes da sua trajetória</p>
           </div>
           <div className="timeline-container">
+            <div 
+              className="timeline-progress-line" 
+              style={{ 
+                width: `${progressPercentage}%`,
+                position: 'absolute',
+                top: '20px',
+                left: '40px',
+                height: '4px',
+                background: 'linear-gradient(90deg, #3298EF, #312e81)',
+                borderRadius: '2px',
+                zIndex: 2,
+                transition: 'width 0.8s ease',
+                maxWidth: 'calc(100% - 80px)'
+              }}
+            ></div>
             <div className="timeline-item">
               <div className="timeline-dot active"></div>
               <div className="timeline-content">
