@@ -135,66 +135,34 @@
 
 /* ... outros estilos ... */
 
-/* 1. Ajuste do Container e Trilho Cinza */
 .timeline-container {
     position: relative;
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
-    /* Padronizamos o padding para 40px, o mesmo deslocamento do trilho */
-    padding: 0 40px; 
-    box-sizing: border-box; /* Garante que o padding não adicione largura total */
-    height: 120px; /* Garante espaço para a linha e o texto */
+    padding: 0 20px;
 }
 
-/* O trilho cinza (::before) */
 .timeline-container::before {
     content: '';
     position: absolute;
     top: 20px;
-    /* Alinhamos a linha cinza com a borda do padding (left: 40px) */
-    left: 40px; 
-    right: 40px; 
+    left: 40px;
+    right: 40px;
     height: 4px;
     background: #e2e8f0;
     border-radius: 2px;
     z-index: 1;
 }
 
-/* 2. Ajuste dos Pontos de Marco (Dots) */
-.timeline-item {
-    position: relative;
-    text-align: center;
-    width: 25%; /* Cada item ocupa 25% da área entre os paddings */
-    z-index: 3; /* Pontos e conteúdo acima das linhas */
-}
 
-.timeline-dot {
-    position: absolute;
-    /* Ajuste vertical para que o centro do dot fique na linha de 20px */
-    top: 15px; 
-    left: 50%;
-    transform: translate(-50%, -50%); /* Centraliza o dot exatamente sobre a linha */
-    /* Você deve ter styles de width/height/background para o dot aqui */
-}
-
-/* Ajustes para alinhar os pontos das extremidades perfeitamente sobre os 40px */
-.timeline-item:first-child .timeline-dot {
-    left: 0;
-    transform: translate(0, -50%); /* O dot deve começar na borda interna (40px) */
-}
-
-.timeline-item:last-child .timeline-dot {
-    left: 100%;
-    transform: translate(-100%, -50%); /* O dot deve terminar na borda interna */
-}
-
-
-.timeline-progress-line {
+.timeline-container::after {
+  content: '';
   position: absolute;
   top: 20px;
   left: 40px;
   height: 4px;
+  width: var(--progress-width, 0%);
   background: linear-gradient(90deg, #3298EF, #312e81);
   border-radius: 2px;
   z-index: 2;

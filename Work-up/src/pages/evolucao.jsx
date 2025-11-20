@@ -331,27 +331,15 @@ export default function Evolucao() {
           </div>
         </div>
 
-        <div className="progress-timeline">
+        <div 
+          className="progress-timeline"
+          style={{ '--progress-width': `${progressPercentage}%` }}
+        >
           <div className="timeline-header">
             <h3><FaChartLine /> Linha do Tempo da Evolução</h3>
             <p>Marcos importantes da sua trajetória</p>
           </div>
           <div className="timeline-container">
-            <div 
-              className="timeline-progress-line" 
-              style={{ 
-                width: `${progressPercentage}%`,
-                position: 'absolute',
-                top: '20px',
-                left: '40px',
-                height: '4px',
-                background: 'linear-gradient(90deg, #3298EF, #312e81)',
-                borderRadius: '2px',
-                zIndex: 2,
-                transition: 'width 0.8s ease',
-                maxWidth: 'calc(100% - 80px)'
-              }}
-            ></div>
             <div className="timeline-item">
               <div className="timeline-dot active"></div>
               <div className="timeline-content">
